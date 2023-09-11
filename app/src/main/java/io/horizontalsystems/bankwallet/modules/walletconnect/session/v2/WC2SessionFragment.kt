@@ -55,9 +55,9 @@ class WC2SessionFragment : BaseComposeFragment() {
     }
 
     @Composable
-    override fun GetContent() {
+    override fun Content(navController: NavController) {
         WCSessionPage(
-            findNavController(),
+            navController,
             viewModel,
         )
     }

@@ -62,7 +62,6 @@ import io.horizontalsystems.bankwallet.ui.compose.ComposeAppTheme
 import io.horizontalsystems.bankwallet.ui.compose.TranslatableString
 import io.horizontalsystems.bankwallet.ui.compose.components.*
 import io.horizontalsystems.bankwallet.ui.helpers.LinkHelper
-import io.horizontalsystems.core.findNavController
 import io.horizontalsystems.core.helpers.HudHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -73,10 +72,10 @@ import java.net.URL
 class NftAssetFragment : BaseComposeFragment() {
 
     @Composable
-    override fun GetContent() {
+    override fun Content(navController: NavController) {
         val collectionUid = requireArguments().getString(NftAssetModule.collectionUidKey)
         val nftUid = requireArguments().getString(NftAssetModule.nftUidKey)?.let { NftUid.fromUid(it) }
-        NftAssetScreen(findNavController(), collectionUid, nftUid)
+        NftAssetScreen(navController, collectionUid, nftUid)
     }
 
 }

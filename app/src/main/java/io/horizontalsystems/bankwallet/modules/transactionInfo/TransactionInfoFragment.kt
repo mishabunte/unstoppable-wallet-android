@@ -35,17 +35,16 @@ import io.horizontalsystems.bankwallet.ui.compose.components.TransactionInfoSpee
 import io.horizontalsystems.bankwallet.ui.compose.components.TransactionInfoStatusCell
 import io.horizontalsystems.bankwallet.ui.compose.components.TransactionInfoTransactionHashCell
 import io.horizontalsystems.bankwallet.ui.compose.components.TransactionNftAmountCell
-import io.horizontalsystems.core.findNavController
 
 class TransactionInfoFragment : BaseComposeFragment() {
 
     private val viewModelTxs by navGraphViewModels<TransactionsViewModel>(R.id.mainFragment) { TransactionsModule.Factory() }
 
     @Composable
-    override fun GetContent() {
+    override fun Content(navController: NavController) {
         val viewItem = viewModelTxs.tmpItemToShow
         if (viewItem == null) {
-            findNavController().popBackStack()
+            navController.popBackStack()
             return 
         }
 
@@ -53,7 +52,7 @@ class TransactionInfoFragment : BaseComposeFragment() {
             TransactionInfoModule.Factory(viewItem)
         }
         
-        TransactionInfoScreen(viewModel, findNavController())
+        TransactionInfoScreen(viewModel, navController)
     }
 
 }

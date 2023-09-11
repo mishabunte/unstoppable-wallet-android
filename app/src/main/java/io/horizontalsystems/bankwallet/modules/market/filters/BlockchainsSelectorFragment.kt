@@ -45,10 +45,10 @@ class BlockchainsSelectorFragment : BaseComposeFragment() {
     }
 
     @Composable
-    override fun GetContent() {
+    override fun Content(navController: NavController) {
         FilterByBlockchainsScreen(
             viewModel,
-            findNavController(),
+            navController,
         )
     }
 

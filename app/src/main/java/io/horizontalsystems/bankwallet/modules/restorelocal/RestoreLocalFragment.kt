@@ -45,7 +45,6 @@ import io.horizontalsystems.bankwallet.ui.compose.components.FormsInputPassword
 import io.horizontalsystems.bankwallet.ui.compose.components.InfoText
 import io.horizontalsystems.bankwallet.ui.compose.components.MenuItem
 import io.horizontalsystems.bankwallet.ui.compose.components.VSpacer
-import io.horizontalsystems.core.findNavController
 import io.horizontalsystems.core.helpers.HudHelper
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -57,7 +56,7 @@ class RestoreLocalFragment : BaseComposeFragment() {
     }
 
     @Composable
-    override fun GetContent() {
+    override fun Content(navController: NavController) {
         val popUpToInclusiveId =
             arguments?.getInt(ManageAccountsModule.popOffOnSuccessKey, R.id.restoreAccountFragment) ?: R.id.restoreAccountFragment
 
@@ -71,7 +70,7 @@ class RestoreLocalFragment : BaseComposeFragment() {
             RestoreLocalNavHost(
                 backupJsonString,
                 fileName,
-                findNavController(),
+                navController,
                 popUpToInclusiveId,
                 popUpInclusive
             )

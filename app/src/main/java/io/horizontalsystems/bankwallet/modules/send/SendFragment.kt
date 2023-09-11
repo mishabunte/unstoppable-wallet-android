@@ -2,6 +2,7 @@ package io.horizontalsystems.bankwallet.modules.send
 
 import androidx.compose.runtime.Composable
 import androidx.core.os.bundleOf
+import androidx.navigation.NavController
 import androidx.navigation.navGraphViewModels
 import io.horizontalsystems.bankwallet.R
 import io.horizontalsystems.bankwallet.core.BaseComposeFragment
@@ -27,22 +28,21 @@ import io.horizontalsystems.bankwallet.modules.send.tron.SendTronViewModel
 import io.horizontalsystems.bankwallet.modules.send.zcash.SendZCashModule
 import io.horizontalsystems.bankwallet.modules.send.zcash.SendZCashScreen
 import io.horizontalsystems.bankwallet.modules.send.zcash.SendZCashViewModel
-import io.horizontalsystems.core.findNavController
 import io.horizontalsystems.core.parcelable
 import io.horizontalsystems.marketkit.models.BlockchainType
 
 class SendFragment : BaseComposeFragment() {
 
     @Composable
-    override fun GetContent() {
+    override fun Content(navController: NavController) {
         val argumentsNonNull = arguments
         if (argumentsNonNull == null) {
-            findNavController().popBackStack()
+            navController.popBackStack()
             return
         }
         val wallet = argumentsNonNull.parcelable<Wallet>(walletKey)
         if (wallet == null) {
-            findNavController().popBackStack()
+            navController.popBackStack()
             return
         }
         val sendEntryPointDestId = argumentsNonNull.getInt(sendEntryPointDestIdKey)
@@ -62,7 +62,7 @@ class SendFragment : BaseComposeFragment() {
                     factory
                 }
                 SendBitcoinNavHost(
-                    findNavController(),
+                    navController,
                     sendBitcoinViewModel,
                     amountInputModeViewModel,
                     sendEntryPointDestId
@@ -75,7 +75,7 @@ class SendFragment : BaseComposeFragment() {
                     factory
                 }
                 SendBinanceScreen(
-                    findNavController(),
+                    navController,
                     sendBinanceViewModel,
                     amountInputModeViewModel,
                     sendEntryPointDestId
@@ -88,7 +88,7 @@ class SendFragment : BaseComposeFragment() {
                     factory
                 }
                 SendZCashScreen(
-                    findNavController(),
+                    navController,
                     sendZCashViewModel,
                     amountInputModeViewModel,
                     sendEntryPointDestId
@@ -110,7 +110,7 @@ class SendFragment : BaseComposeFragment() {
                 val initiateLazyViewModel = evmKitWrapperViewModel //needed in SendEvmConfirmationFragment
                 val sendEvmViewModel by navGraphViewModels<SendEvmViewModel>(R.id.sendXFragment) { factory }
                 SendEvmScreen(
-                    findNavController(),
+                    navController,
                     sendEvmViewModel,
                     amountInputModeViewModel,
                     sendEntryPointDestId
@@ -121,7 +121,7 @@ class SendFragment : BaseComposeFragment() {
                 val factory = SendSolanaModule.Factory(wallet, predefinedAddress)
                 val sendSolanaViewModel by navGraphViewModels<SendSolanaViewModel>(R.id.sendXFragment) { factory }
                 SendSolanaScreen(
-                    findNavController(),
+                    navController,
                     sendSolanaViewModel,
                     amountInputModeViewModel,
                     sendEntryPointDestId
@@ -132,7 +132,7 @@ class SendFragment : BaseComposeFragment() {
                 val factory = SendTronModule.Factory(wallet, predefinedAddress)
                 val sendTronViewModel by navGraphViewModels<SendTronViewModel>(R.id.sendXFragment) { factory }
                 SendTronScreen(
-                    findNavController(),
+                    navController,
                     sendTronViewModel,
                     amountInputModeViewModel,
                     sendEntryPointDestId

@@ -34,7 +34,6 @@ import io.horizontalsystems.bankwallet.ui.compose.components.ButtonSecondaryDefa
 import io.horizontalsystems.bankwallet.ui.compose.components.HsBackButton
 import io.horizontalsystems.bankwallet.ui.compose.components.InfoText
 import io.horizontalsystems.bankwallet.ui.compose.components.body_leah
-import io.horizontalsystems.core.findNavController
 import io.horizontalsystems.core.helpers.HudHelper
 import io.horizontalsystems.core.parcelable
 import kotlinx.coroutines.delay
@@ -42,9 +41,9 @@ import kotlinx.coroutines.delay
 class BackupConfirmKeyFragment : BaseComposeFragment() {
 
     @Composable
-    override fun GetContent() {
+    override fun Content(navController: NavController) {
         RecoveryPhraseVerifyScreen(
-            findNavController(),
+            navController,
             arguments?.parcelable(BackupConfirmKeyModule.ACCOUNT)!!,
         )
     }

@@ -32,13 +32,12 @@ import io.horizontalsystems.bankwallet.ui.compose.components.SectionUniversalIte
 import io.horizontalsystems.bankwallet.ui.compose.components.VSpacer
 import io.horizontalsystems.bankwallet.ui.compose.components.body_leah
 import io.horizontalsystems.bankwallet.ui.compose.components.subhead2_grey
-import io.horizontalsystems.core.findNavController
 
 class ReceiveTokenSelectFragment : BaseComposeFragment() {
 
     @Composable
-    override fun GetContent() {
-        ReceiveTokenSelectScreen(findNavController())
+    override fun Content(navController: NavController) {
+        ReceiveTokenSelectScreen(navController)
     }
 
 }

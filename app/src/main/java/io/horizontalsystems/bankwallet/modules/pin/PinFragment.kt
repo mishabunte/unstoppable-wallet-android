@@ -2,12 +2,12 @@ package io.horizontalsystems.bankwallet.modules.pin
 
 import androidx.compose.runtime.Composable
 import androidx.core.os.bundleOf
+import androidx.navigation.NavController
 import io.horizontalsystems.bankwallet.core.BaseComposeFragment
 import io.horizontalsystems.bankwallet.modules.pin.ui.PinEdit
 import io.horizontalsystems.bankwallet.modules.pin.ui.PinSet
 import io.horizontalsystems.bankwallet.modules.pin.ui.PinUnlock
 import io.horizontalsystems.bankwallet.ui.compose.ComposeAppTheme
-import io.horizontalsystems.core.findNavController
 import io.horizontalsystems.core.parcelable
 import io.horizontalsystems.core.setNavigationResult
 
@@ -26,17 +26,17 @@ class PinFragment : BaseComposeFragment() {
     }
 
     @Composable
-    override fun GetContent() {
+    override fun Content(navController: NavController) {
         PinScreen(
             interactionType = interactionType,
             showCancelButton = showCancelButton,
-            onBackPress = { findNavController().popBackStack() },
-            dismissWithSuccess = { dismissWithSuccess() },
-            onCancelClick = { onCancelClick() }
+            onBackPress = { navController.popBackStack() },
+            dismissWithSuccess = { dismissWithSuccess(navController) },
+            onCancelClick = { onCancelClick(navController) }
         )
     }
 
-    private fun dismissWithSuccess() {
+    private fun dismissWithSuccess(navController: NavController) {
         if (attachedToLockScreen && interactionType == PinInteractionType.UNLOCK) {
             activity?.setResult(PinModule.RESULT_OK)
             activity?.finish()
@@ -48,10 +48,10 @@ class PinFragment : BaseComposeFragment() {
             PinModule.requestResult to PinModule.RESULT_OK
         )
         setNavigationResult(PinModule.requestKey, bundle)
-        findNavController().popBackStack()
+        navController.popBackStack()
     }
 
-    private fun onCancelClick() {
+    private fun onCancelClick(navController: NavController) {
         if (attachedToLockScreen && interactionType == PinInteractionType.UNLOCK) {
             activity?.setResult(PinModule.RESULT_CANCELLED)
             activity?.finish()
@@ -63,7 +63,7 @@ class PinFragment : BaseComposeFragment() {
             PinModule.requestResult to PinModule.RESULT_CANCELLED
         )
         setNavigationResult(PinModule.requestKey, bundle)
-        findNavController().popBackStack()
+        navController.popBackStack()
     }
 
 }

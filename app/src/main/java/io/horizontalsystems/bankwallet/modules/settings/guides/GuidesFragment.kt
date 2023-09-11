@@ -44,16 +44,15 @@ import io.horizontalsystems.bankwallet.ui.compose.components.ScrollableTabs
 import io.horizontalsystems.bankwallet.ui.compose.components.TabItem
 import io.horizontalsystems.bankwallet.ui.compose.components.caption_grey
 import io.horizontalsystems.bankwallet.ui.compose.components.title3_leah
-import io.horizontalsystems.core.findNavController
 import io.horizontalsystems.core.helpers.DateHelper
 import java.net.UnknownHostException
 
 class GuidesFragment : BaseComposeFragment() {
 
     @Composable
-    override fun GetContent() {
+    override fun Content(navController: NavController) {
         ComposeAppTheme {
-            GuidesScreen(findNavController())
+            GuidesScreen(navController)
         }
     }
 

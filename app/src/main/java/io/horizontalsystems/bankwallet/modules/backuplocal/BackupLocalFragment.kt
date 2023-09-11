@@ -11,13 +11,12 @@ import io.horizontalsystems.bankwallet.core.BaseComposeFragment
 import io.horizontalsystems.bankwallet.core.composablePage
 import io.horizontalsystems.bankwallet.modules.backuplocal.password.LocalBackupPasswordScreen
 import io.horizontalsystems.bankwallet.modules.backuplocal.terms.LocalBackupTermsScreen
-import io.horizontalsystems.core.findNavController
 
 class BackupLocalFragment : BaseComposeFragment() {
 
     @Composable
-    override fun GetContent() {
-        BackupLocalNavHost(findNavController(), requireArguments().getString(ACCOUNT_ID_KEY))
+    override fun Content(navController: NavController) {
+        BackupLocalNavHost(navController, requireArguments().getString(ACCOUNT_ID_KEY))
     }
 
     companion object {

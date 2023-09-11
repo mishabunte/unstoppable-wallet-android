@@ -22,7 +22,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.os.bundleOf
 import androidx.fragment.app.viewModels
-import androidx.navigation.fragment.findNavController
+import androidx.navigation.NavController
 import io.horizontalsystems.bankwallet.R
 import io.horizontalsystems.bankwallet.core.BaseComposeFragment
 import io.horizontalsystems.bankwallet.entities.ViewState
@@ -55,14 +55,15 @@ class CoinTreasuriesFragment : BaseComposeFragment() {
     }
 
     @Composable
-    override fun GetContent() {
+    override fun Content(navController: NavController) {
         ComposeAppTheme {
-            CoinTreasuriesScreen(viewModel)
+            CoinTreasuriesScreen(navController, viewModel)
         }
     }
 
     @Composable
     private fun CoinTreasuriesScreen(
+        navController: NavController,
         viewModel: CoinTreasuriesViewModel
     ) {
         val viewState by viewModel.viewStateLiveData.observeAsState()
@@ -74,7 +75,7 @@ class CoinTreasuriesFragment : BaseComposeFragment() {
             AppBar(
                 title = TranslatableString.ResString(R.string.CoinPage_Treasuries),
                 navigationIcon = {
-                    HsBackButton(onClick = { findNavController().popBackStack() })
+                    HsBackButton(onClick = { navController.popBackStack() })
                 }
             )
             HSSwipeRefresh(

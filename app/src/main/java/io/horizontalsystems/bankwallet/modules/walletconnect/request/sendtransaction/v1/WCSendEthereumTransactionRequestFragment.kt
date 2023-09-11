@@ -5,6 +5,7 @@ import android.view.View
 import androidx.activity.addCallback
 import androidx.compose.runtime.Composable
 import androidx.fragment.app.viewModels
+import androidx.navigation.NavController
 import androidx.navigation.navGraphViewModels
 import io.horizontalsystems.bankwallet.R
 import io.horizontalsystems.bankwallet.core.AppLogger
@@ -35,10 +36,10 @@ class WCSendEthereumTransactionRequestFragment : BaseComposeFragment() {
     private val nonceViewModel by navGraphViewModels<SendEvmNonceViewModel>(R.id.wcSendEthereumTransactionRequestFragment) { vmFactory }
 
     @Composable
-    override fun GetContent() {
+    override fun Content(navController: NavController) {
         val cacheNoneViewModel = nonceViewModel //Needed in SendEvmSettingsFragment
         SendEthRequestScreen(
-            findNavController(),
+            navController,
             viewModel,
             sendEvmTransactionViewModel,
             feeViewModel,

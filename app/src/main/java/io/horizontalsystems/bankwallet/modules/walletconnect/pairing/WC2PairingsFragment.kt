@@ -38,13 +38,12 @@ import io.horizontalsystems.bankwallet.ui.compose.components.RowUniversal
 import io.horizontalsystems.bankwallet.ui.compose.components.body_leah
 import io.horizontalsystems.bankwallet.ui.compose.components.body_lucian
 import io.horizontalsystems.bankwallet.ui.compose.components.subhead2_grey
-import io.horizontalsystems.core.findNavController
 
 class WC2PairingsFragment : BaseComposeFragment() {
 
     @Composable
-    override fun GetContent() {
-        WCPairingsScreen(findNavController())
+    override fun Content(navController: NavController) {
+        WCPairingsScreen(navController)
     }
 
 }

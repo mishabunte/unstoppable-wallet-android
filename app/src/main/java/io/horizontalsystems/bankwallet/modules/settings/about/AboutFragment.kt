@@ -48,14 +48,13 @@ import io.horizontalsystems.bankwallet.ui.compose.components.HsBackButton
 import io.horizontalsystems.bankwallet.ui.compose.components.InfoTextBody
 import io.horizontalsystems.bankwallet.ui.compose.components.subhead2_grey
 import io.horizontalsystems.bankwallet.ui.helpers.LinkHelper
-import io.horizontalsystems.core.findNavController
 
 class AboutFragment : BaseComposeFragment() {
 
     @Composable
-    override fun GetContent() {
+    override fun Content(navController: NavController) {
         ComposeAppTheme {
-            AboutNavHost(findNavController())
+            AboutNavHost(navController)
         }
     }
 
