@@ -135,5 +135,35 @@ private fun TransactionSpeedUpCancelScreen(
             sendTransactionState.networkFee,
             StatPage.Resend
         )
+        // Old version for HW support
+        /*
+                Column(modifier = Modifier.padding(it)) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                SendEvmTransactionView(
+                    sendEvmTransactionViewModel,
+                    feeViewModel,
+                    nonceViewModel,
+                    navController,
+                    speedUpCancelViewModel.description
+                )
+            }
+            if (!sendEvmTransactionViewModel.isHardwareAccount()) {
+                ButtonsGroupWithShade {
+                    ButtonPrimaryYellow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 16.dp),
+                        title = speedUpCancelViewModel.buttonTitle,
+                        onClick = onSendClick,
+                        enabled = if (speedUpCancelViewModel.isTransactionPending) enabled else false
+                    )
+                }
+            }
+        }
+         */
     }
 }
