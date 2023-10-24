@@ -3,6 +3,7 @@ package io.horizontalsystems.tonkit.api
 import android.util.Log
 import io.horizontalsystems.tonkit.ITonApi
 import io.horizontalsystems.tonkit.entities.TonTransaction
+import io.horizontalsystems.tonkit.entities.TransactionType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
@@ -12,6 +13,10 @@ import org.ton.api.liteclient.config.LiteClientConfigGlobal
 import org.ton.bitstring.BitString
 import org.ton.block.AccountInfo
 import org.ton.block.AddrStd
+import org.ton.block.CommonMsgInfo
+import org.ton.block.ExtInMsgInfo
+import org.ton.block.ExtOutMsgInfo
+import org.ton.block.IntMsgInfo
 import org.ton.lite.client.LiteClient
 import org.ton.lite.client.internal.TransactionId
 import org.ton.lite.client.internal.TransactionInfo
@@ -99,9 +104,46 @@ class TonApiAdnl(
         return transactions.map { createTonTransaction(it) }
     }
 
-    private fun createTonTransaction(info: TransactionInfo) = TonTransaction(
-        hash = info.id.hash.toHex(),
-        lt = info.id.lt,
-        timestamp = info.transaction.value.now.toLong()
-    )
+    private fun createTonTransaction(info: TransactionInfo): TonTransaction {
+        Log.e("AAA", "============")
+        Log.e("AAA", "\n\n hash: ${info.id.hash.toHex()}\n\n")
+//        Log.e("AAA", "\n\n${info.transaction.value}\n\n")
+        Log.e("AAA", "============")
+
+        val inMsg = info.transaction.value.r1.value.inMsg.value?.value?.info
+        val outMsgs = info.transaction.value.r1.value.outMsgs
+
+        val value: BigDecimal?
+        val transactionType: TransactionType
+        when {
+            outMsgs.count() == 1 -> {
+                value = getValue(outMsgs.first().second.value.info)
+                transactionType = TransactionType.Outgoing
+            }
+
+            inMsg != null -> {
+                value = getValue(inMsg)
+                transactionType = TransactionType.Incoming
+            }
+
+            else -> {
+                value = null
+                transactionType = TransactionType.Outgoing
+            }
+        }
+
+        return TonTransaction(
+            hash = info.id.hash.toHex(),
+            lt = info.id.lt,
+            timestamp = info.transaction.value.now.toLong(),
+            value = value ?: BigDecimal.ZERO,
+            type = transactionType
+        )
+    }
+
+    private fun getValue(inMsg: CommonMsgInfo) = when (inMsg) {
+        is IntMsgInfo -> BigDecimal(inMsg.value.coins.toString())
+        is ExtInMsgInfo -> null
+        is ExtOutMsgInfo -> null
+    }
 }
