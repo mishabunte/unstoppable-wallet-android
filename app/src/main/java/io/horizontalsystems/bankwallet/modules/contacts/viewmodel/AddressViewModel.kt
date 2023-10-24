@@ -19,6 +19,7 @@ import io.horizontalsystems.bankwallet.modules.address.AddressHandlerEns
 import io.horizontalsystems.bankwallet.modules.address.AddressHandlerEvm
 import io.horizontalsystems.bankwallet.modules.address.AddressHandlerPure
 import io.horizontalsystems.bankwallet.modules.address.AddressHandlerSolana
+import io.horizontalsystems.bankwallet.modules.address.AddressHandlerTon
 import io.horizontalsystems.bankwallet.modules.address.AddressHandlerTron
 import io.horizontalsystems.bankwallet.modules.address.AddressHandlerUdn
 import io.horizontalsystems.bankwallet.modules.address.EnsResolverHolder
@@ -185,6 +186,9 @@ class AddressViewModel(
             }
             BlockchainType.Tron -> {
                 rawAddressHandlers.add(AddressHandlerTron())
+            }
+            BlockchainType.Ton -> {
+                rawAddressHandlers.add(AddressHandlerTon())
             }
             is BlockchainType.Unsupported -> {
             }
