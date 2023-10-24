@@ -5,6 +5,7 @@ import io.horizontalsystems.bankwallet.entities.Account
 import io.horizontalsystems.bankwallet.entities.AccountOrigin
 import io.horizontalsystems.bankwallet.entities.AccountType
 import io.horizontalsystems.bankwallet.entities.ActiveAccount
+import io.horizontalsystems.bankwallet.entities.CexType
 import io.reactivex.Flowable
 
 class AccountsStorage(appDatabase: AppDatabase) : IAccountsStorage {
@@ -25,6 +26,11 @@ class AccountsStorage(appDatabase: AppDatabase) : IAccountsStorage {
         private const val STELLAR_ADDRESS = "stellar_address"
         private const val BITCOIN_ADDRESS = "bitcoin_address"
         private const val HD_EXTENDED_LEY = "hd_extended_key"
+        private const val ADDRESS_HARDWARE = "address_hardware"
+        private const val SOLANA_ADDRESS_HARDWARE = "solana_address_hardware"
+        private const val TRON_ADDRESS_HARDWARE = "tron_address_hardware"
+        private const val HD_EXTENDED_LEY_HARDWARE = "hd_extended_key_hardware"
+        private const val CEX = "cex"
     }
 
     override fun getActiveAccountId(level: Int): String? {
@@ -57,6 +63,15 @@ class AccountsStorage(appDatabase: AppDatabase) : IAccountsStorage {
                             STELLAR_ADDRESS -> AccountType.StellarAddress(record.key!!.value)
                             BITCOIN_ADDRESS -> AccountType.BitcoinAddress.fromSerialized(record.key!!.value)
                             HD_EXTENDED_LEY -> AccountType.HdExtendedKey(record.key!!.value)
+                            ADDRESS_HARDWARE -> AccountType.EvmAddressHardware(record.key!!.value)
+                            SOLANA_ADDRESS_HARDWARE -> AccountType.SolanaAddressHardware(record.key!!.value)
+                            TRON_ADDRESS_HARDWARE -> AccountType.TronAddressHardware(record.key!!.value)
+                            HD_EXTENDED_LEY_HARDWARE -> AccountType.HdExtendedKeyHardware(record.key!!.value)
+                            CEX -> {
+                                CexType.deserialize(record.key!!.value)?.let {
+                                    AccountType.Cex(it)
+                                }
+                            }
                             else -> null
                         }
                         Account(
@@ -157,6 +172,26 @@ class AccountsStorage(appDatabase: AppDatabase) : IAccountsStorage {
             is AccountType.HdExtendedKey -> {
                 key = SecretString(account.type.keySerialized)
                 accountType = HD_EXTENDED_LEY
+            }
+            is AccountType.EvmAddressHardware -> {
+                key = SecretString(account.type.address)
+                accountType = ADDRESS_HARDWARE
+            }
+            is AccountType.SolanaAddressHardware -> {
+                key = SecretString(account.type.address)
+                accountType = SOLANA_ADDRESS_HARDWARE
+            }
+            is AccountType.TronAddressHardware -> {
+                key = SecretString(account.type.address)
+                accountType = TRON_ADDRESS_HARDWARE
+            }
+            is AccountType.HdExtendedKeyHardware -> {
+                key = SecretString(account.type.keySerialized)
+                accountType = HD_EXTENDED_LEY_HARDWARE
+            }
+            is AccountType.Cex -> {
+                key = SecretString(account.type.cexType.serialized())
+                accountType = CEX
             }
         }
 

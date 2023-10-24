@@ -4,6 +4,7 @@ import com.google.gson.annotations.SerializedName
 import io.horizontalsystems.bankwallet.core.App
 import io.horizontalsystems.bankwallet.core.managers.RestoreSettingType
 import io.horizontalsystems.bankwallet.entities.AccountType
+import io.horizontalsystems.bankwallet.entities.CexType
 import io.horizontalsystems.hdwalletkit.Base58
 import io.horizontalsystems.tronkit.toBigInteger
 
@@ -18,6 +19,11 @@ object BackupLocalModule {
     private const val STELLAR_ADDRESS = "stellar_address"
     private const val BITCOIN_ADDRESS = "bitcoin_address"
     private const val HD_EXTENDED_LEY = "hd_extended_key"
+    private const val ADDRESS_HARDWARE = "address_hardware"
+    private const val SOLANA_ADDRESS_HARDWARE = "solana_address_hardware"
+    private const val TRON_ADDRESS_HARDWARE = "tron_address_hardware"
+    private const val HD_EXTENDED_LEY_HARDWARE = "hd_extended_key_hardware"
+    private const val CEX = "cex"
 
     //Backup Json file data structure
 
@@ -78,6 +84,11 @@ object BackupLocalModule {
         is AccountType.StellarAddress -> STELLAR_ADDRESS
         is AccountType.BitcoinAddress -> BITCOIN_ADDRESS
         is AccountType.HdExtendedKey -> HD_EXTENDED_LEY
+        is AccountType.EvmAddressHardware -> ADDRESS_HARDWARE
+        is AccountType.SolanaAddressHardware -> SOLANA_ADDRESS_HARDWARE
+        is AccountType.TronAddressHardware -> TRON_ADDRESS_HARDWARE
+        is AccountType.HdExtendedKeyHardware -> HD_EXTENDED_LEY_HARDWARE
+        is AccountType.Cex -> CEX
     }
 
     @Throws(IllegalStateException::class)
@@ -102,6 +113,18 @@ object BackupLocalModule {
             STELLAR_ADDRESS -> AccountType.StellarAddress(String(data, Charsets.UTF_8))
             BITCOIN_ADDRESS -> AccountType.BitcoinAddress.fromSerialized(String(data, Charsets.UTF_8))
             HD_EXTENDED_LEY -> AccountType.HdExtendedKey(Base58.encode(data))
+            ADDRESS_HARDWARE -> AccountType.EvmAddressHardware(String(data, Charsets.UTF_8))
+            SOLANA_ADDRESS_HARDWARE -> AccountType.SolanaAddressHardware(String(data, Charsets.UTF_8))
+            TRON_ADDRESS_HARDWARE -> AccountType.TronAddressHardware(String(data, Charsets.UTF_8))
+            HD_EXTENDED_LEY_HARDWARE -> AccountType.HdExtendedKeyHardware(Base58.encode(data))
+            CEX -> {
+                val cexType = CexType.deserialize(String(data, Charsets.UTF_8))
+                if (cexType != null) {
+                    AccountType.Cex(cexType)
+                } else {
+                    throw IllegalStateException("Unknown Cex account type")
+                }
+            }
 
             else -> throw IllegalStateException("Unknown account type")
         }
@@ -127,6 +150,11 @@ object BackupLocalModule {
         is AccountType.StellarAddress -> accountType.address.toByteArray(Charsets.UTF_8)
         is AccountType.BitcoinAddress -> accountType.serialized.toByteArray(Charsets.UTF_8)
         is AccountType.HdExtendedKey -> Base58.decode(accountType.keySerialized)
+        is AccountType.EvmAddressHardware -> accountType.address.toByteArray(Charsets.UTF_8)
+        is AccountType.SolanaAddressHardware -> accountType.address.toByteArray(Charsets.UTF_8)
+        is AccountType.TronAddressHardware -> accountType.address.toByteArray(Charsets.UTF_8)
+        is AccountType.HdExtendedKeyHardware -> Base58.decode(accountType.keySerialized)
+        is AccountType.Cex -> accountType.cexType.serialized().toByteArray(Charsets.UTF_8)
     }
 
     val kdfDefault = KdfParams(

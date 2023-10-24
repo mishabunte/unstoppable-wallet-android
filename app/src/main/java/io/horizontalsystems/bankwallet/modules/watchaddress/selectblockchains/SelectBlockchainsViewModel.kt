@@ -31,6 +31,7 @@ class SelectBlockchainsViewModel(
         val tokens = service.tokens(accountType)
 
         when (accountType) {
+            is AccountType.Cex,
             is AccountType.SolanaAddress,
             is AccountType.TronAddress,
             is AccountType.BitcoinAddress,
@@ -38,15 +39,18 @@ class SelectBlockchainsViewModel(
             is AccountType.StellarAddress,
             is AccountType.Mnemonic,
             is AccountType.EvmPrivateKey,
+            is AccountType.SolanaAddress,
+            is AccountType.SolanaAddressHardware,
+            is AccountType.TronAddress,
             is AccountType.StellarSecretKey -> Unit // N/A
-            is AccountType.EvmAddress -> {
+            is AccountType.TronAddressHardware -> Unit // N/A
+            is AccountType.EvmAddress, is AccountType.EvmAddressHardware -> {
                 title = R.string.Watch_Select_Blockchains
                 coinViewItems = tokens.map {
                     coinViewItemForBlockchain(it)
                 }
             }
-
-            is AccountType.HdExtendedKey -> {
+            is AccountType.HdExtendedKey, is AccountType.HdExtendedKeyHardware -> {
                 title = R.string.Watch_Select_Coins
                 coinViewItems = tokens.map {
                     coinViewItemForToken(it, label = it.badge)

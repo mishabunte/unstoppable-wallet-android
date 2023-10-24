@@ -316,12 +316,24 @@ fun BlockchainType.supports(accountType: AccountType): Boolean {
                 else -> false
             }
         }
+        is AccountType.HdExtendedKeyHardware -> {
+            val coinTypes = accountType.hdExtendedKey.coinTypes
+            when (this) {
+                BlockchainType.Bitcoin -> coinTypes.contains(ExtendedKeyCoinType.Bitcoin)
+                BlockchainType.Litecoin -> coinTypes.contains(ExtendedKeyCoinType.Litecoin)
+                BlockchainType.BitcoinCash,
+                BlockchainType.Dash,
+                BlockchainType.ECash -> coinTypes.contains(ExtendedKeyCoinType.Bitcoin) && accountType.hdExtendedKey.purposes.contains(HDWallet.Purpose.BIP44)
+                else -> false
+            }
+        }
+        //is AccountType.EvmAddress, is AccountType.EvmAddressHardware ->
 
         is AccountType.BitcoinAddress -> {
             this === accountType.blockchainType
         }
 
-        is AccountType.EvmAddress ->
+        is AccountType.EvmAddress, is AccountType.EvmAddressHardware ->
             this == BlockchainType.Ethereum
                     || this == BlockchainType.BinanceSmartChain
                     || this == BlockchainType.Polygon
@@ -344,10 +356,10 @@ fun BlockchainType.supports(accountType: AccountType): Boolean {
                     || this == BlockchainType.Gnosis
                     || this == BlockchainType.Fantom
         }
-        is AccountType.SolanaAddress ->
+        is AccountType.SolanaAddress, is AccountType.SolanaAddressHardware ->
             this == BlockchainType.Solana
 
-        is AccountType.TronAddress ->
+        is AccountType.TronAddress, is AccountType.TronAddressHardware ->
             this == BlockchainType.Tron
 
         is AccountType.TonAddress ->
@@ -358,6 +370,7 @@ fun BlockchainType.supports(accountType: AccountType): Boolean {
 
         is AccountType.StellarSecretKey ->
             this == BlockchainType.Stellar
+        is AccountType.Cex -> false
     }
 }
 
