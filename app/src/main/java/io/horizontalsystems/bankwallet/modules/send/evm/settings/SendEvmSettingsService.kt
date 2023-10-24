@@ -43,12 +43,20 @@ class SendEvmSettingsService(
         }
     }
 
+    var syncPaused = false
+    fun pauseSync() {
+        syncPaused = true
+    }
+
     fun clear() {
         feeService.clear()
     }
 
     private fun sync() {
         val feeState = feeState
+        if (syncPaused) {
+            return
+        }
         val nonceState = nonceService.state
 
         state = when {
