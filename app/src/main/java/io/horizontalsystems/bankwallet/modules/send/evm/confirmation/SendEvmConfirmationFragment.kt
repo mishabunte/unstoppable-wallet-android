@@ -136,6 +136,7 @@ private fun SendEvmConfirmationScreen(
                 },
                 enabled = uiState.sendEnabled && buttonEnabled
             )
+            // TODO: Configure for hardware wallet
         }
     ) {
         SendEvmTransactionView(

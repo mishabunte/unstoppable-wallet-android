@@ -26,6 +26,7 @@ import io.horizontalsystems.bankwallet.core.stats.StatEvent
 import io.horizontalsystems.bankwallet.core.stats.StatPage
 import io.horizontalsystems.bankwallet.core.stats.stat
 import io.horizontalsystems.bankwallet.modules.evmfee.Cautions
+import io.horizontalsystems.bankwallet.modules.hardwarewallet.HardwareWalletSignFragment
 import io.horizontalsystems.bankwallet.modules.multiswap.ui.DataField
 import io.horizontalsystems.bankwallet.modules.multiswap.ui.DataFieldFee
 import io.horizontalsystems.bankwallet.modules.send.SendModule
@@ -90,6 +91,15 @@ fun SendEvmTransactionView(
 
         if (cautions.isNotEmpty()) {
             Cautions(cautions)
+        }
+
+        val viewModel = null // TODO: Add viewModel for HW wallet
+
+        if ((cautions == null || cautions?.size == 0) && v)
+        {
+            HardwareWalletSignFragment(ownAddress = transactionViewModel.service.ownAddress.eip55,
+                transactionViewModel, feeCellViewModel,
+            )
         }
     }
 }
