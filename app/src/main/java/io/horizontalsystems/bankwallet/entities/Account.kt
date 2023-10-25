@@ -146,7 +146,16 @@ sealed class AccountType : Parcelable {
     data class TronAddress(val address: String): AccountType()
 
     @Parcelize
-    data class EvmAddressHardware(val address: String) : AccountType()
+    data class EvmAddressHardware(val address: String) : AccountType() {
+        override fun equals(other: Any?): Boolean {
+            return other is EvmAddressHardware && address == other.address
+        }
+
+        override fun hashCode(): Int {
+            return address.hashCode()
+        }
+    }
+
 
     @Parcelize
     data class SolanaAddressHardware(val address: String) : AccountType()
