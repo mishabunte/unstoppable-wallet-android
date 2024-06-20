@@ -11,6 +11,8 @@ import android.nfc.Tag
 import android.nfc.tech.Ndef
 import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.graphics.ExperimentalAnimationGraphicsApi
 import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
@@ -41,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -55,7 +58,9 @@ import io.horizontalsystems.bankwallet.R
 import io.horizontalsystems.bankwallet.core.AppLogger
 import io.horizontalsystems.bankwallet.core.managers.toSignature
 import io.horizontalsystems.bankwallet.core.toHexString
+import io.horizontalsystems.bankwallet.core.utils.ModuleField
 import io.horizontalsystems.bankwallet.modules.evmfee.EvmFeeCellViewModel
+import io.horizontalsystems.bankwallet.modules.qrscanner.QRScannerActivity
 import io.horizontalsystems.bankwallet.modules.sendevmtransaction.SendEvmTransactionViewModel
 import io.horizontalsystems.bankwallet.modules.walletconnect.request.signmessage.WCSignMessageRequestViewModel
 import io.horizontalsystems.bankwallet.ui.compose.ComposeAppTheme
@@ -84,7 +89,8 @@ fun HardwareWalletSignFragment(ownAddress: String,
 
     var isSending by remember { mutableStateOf<Boolean>(false) }
 
-    var scanToTransmit by remember { mutableStateOf<Boolean>(false) }
+    var showScanButton by remember { mutableStateOf<Boolean>(false) }
+
     var txData by remember { mutableStateOf<String?>(null) }
     var messageHex by remember { mutableStateOf<String?>(null) }
 
@@ -122,7 +128,7 @@ fun HardwareWalletSignFragment(ownAddress: String,
         val intentListener = Consumer<Intent> {
             if (ownAddress != null) {
                 if (handleNfcIntent(it, ownAddress!!, txData, messageHex)) {
-                    scanToTransmit = true
+                    showScanButton = true
                 } else {
                     sendViewModel?.service?.setFailed(IOException("NFC Connection Error"))
                     signMessageViewModel?.showSignError = true
@@ -152,6 +158,35 @@ fun HardwareWalletSignFragment(ownAddress: String,
         atEnd
     )
 
+    // for scanner
+    val qrScannerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+
+            val scanAddress: String = result.data?.getStringExtra(ModuleField.SCAN_ADDRESS).toString()
+
+            if (scanAddress.startsWith("https://app.hito.dev/eth/tx/#!")) {
+                val txHex = scanAddress.removePrefix("https://app.hito.dev/eth/tx/#!")
+                val signature = decodeRawTransactionSignature(txHex)
+                val signatureHex = signature?.toHex()
+                isSending = true
+                sendViewModel?.service?.send(logger, signatureHex)
+            } else if(scanAddress.startsWith("evm.sig:")) {
+                val signatureHex = scanAddress.removePrefix("evm.sig:")
+                isSending = true
+                if (messageHex == null) {
+                    sendViewModel?.service?.send(logger, signatureHex)
+                } else {
+                    val signature = signatureHex.toSignature()
+                    val shex = signature?.toByteArray().toHexString()
+                    signMessageViewModel?.acceptWithSignature(shex!!)
+                }
+            } else {
+                sendViewModel?.service?.setFailed(IOException("Signature Scan Error"))
+                signMessageViewModel?.showSignError = true
+            }
+        }
+    }
+
     if (!isSending) {
         Box(
             modifier = Modifier
@@ -171,44 +206,33 @@ fun HardwareWalletSignFragment(ownAddress: String,
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                if (scanToTransmit) {
-                    Box(
+                if (showScanButton) {
+                    Column(
                         modifier = Modifier
-                            .fillMaxWidth(0.75f)
-                            .aspectRatio(1.6f),
-                        contentAlignment = Alignment.Center,
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        ScannerView(onScan = {
-
-                            if (it.startsWith("https://app.hito.dev/eth/tx/#!")) {
-                                val txHex = it.removePrefix("https://app.hito.dev/eth/tx/#!")
-                                val signature = decodeRawTransactionSignature(txHex)
-                                val signatureHex = signature?.toHex()
-                                isSending = true
-                                sendViewModel?.service?.send(logger, signatureHex)
-                            } else if(it.startsWith("evm.sig:")) {
-                                val signatureHex = it.removePrefix("evm.sig:")
-                                isSending = true
-                                if (messageHex == null) {
-                                    sendViewModel?.service?.send(logger, signatureHex)
-                                } else {
-                                    val signature = signatureHex.toSignature()
-                                    val shex = signature?.toByteArray().toHexString()
-                                    signMessageViewModel?.acceptWithSignature(shex!!)
-                                }
-                            } else {
-                                sendViewModel?.service?.setFailed(IOException("Signature Scan Error"))
-                                signMessageViewModel?.showSignError = true
+                        Text(
+                            text = "Hit 'Scan to transmit' to scan the displayed QR Code and complete the process",
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .fillMaxWidth()
+                                .padding(top = 16.dp, bottom = 8.dp),
+                            color = Color.Black,
+                            fontSize = 12.sp,
+                            textAlign = TextAlign.Center
+                        )
+                        ButtonPrimaryYellow(
+                            title = "Scan to transmit",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                            onClick = {
+                                qrScannerLauncher.launch(QRScannerActivity.getScanQrIntent(context))
                             }
-                        })
+                        )
                     }
-                    Text(
-                        "Scan to Transmit",
-                        modifier = Modifier.padding(top = 16.dp),
-                        color = ComposeAppTheme.colors.jacob,
-                        fontSize = 18.sp
-                    )
-
                 } else {
                     Icon(
                         modifier = Modifier.size(96.dp),//.background(Color.Gray),
@@ -314,40 +338,6 @@ fun createTextRecord(text: String, locale: Locale = Locale("en", "US"), encodeIn
     System.arraycopy(textBytes, 0, data, 1 + langBytes.size, textBytes.size)
 
     return NdefRecord(NdefRecord.TNF_WELL_KNOWN, NdefRecord.RTD_TEXT, ByteArray(0), data)
-}
-
-@OptIn(ExperimentalPermissionsApi::class)
-@Composable
-private fun ScannerView(onScan: (String) -> Unit) {
-    val context = LocalContext.current
-    val barcodeView = remember {
-        CompoundBarcodeView(context).apply {
-            this.initializeFromIntent((context as Activity).intent)
-            this.setStatusText("")
-            this.decodeSingle { result ->
-                result.text?.let { barCodeOrQr ->
-                    onScan.invoke(barCodeOrQr)
-                }
-            }
-        }
-    }
-
-    val cameraPermissionState = rememberPermissionState(Manifest.permission.CAMERA)
-    var showPermissionNeededDialog by remember { mutableStateOf(cameraPermissionState.status != PermissionStatus.Granted) }
-
-    if (showPermissionNeededDialog) {
-        ButtonPrimaryYellow(title = "Request Camera Permission", onClick = {
-            cameraPermissionState.launchPermissionRequest()
-            showPermissionNeededDialog = false
-        })
-    } else {
-        AndroidView(factory = { barcodeView })
-    }
-
-    DisposableLifecycleCallbacks(
-        onResume = barcodeView::resume,
-        onPause = barcodeView::pause
-    )
 }
 
 fun Signature.toHex(): String {
