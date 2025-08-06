@@ -26,6 +26,8 @@ abstract class AbstractSendTransactionService: ServiceState<SendTransactionServi
     @Composable
     abstract fun GetSettingsContent(navController: NavController)
     abstract suspend fun sendTransaction() : SendTransactionResult
+    abstract fun isHardwareAccount(): Boolean
+    abstract fun pauseSync()
 
     fun refreshUuid() {
         uuid = UUID.randomUUID().toString()

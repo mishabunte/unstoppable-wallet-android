@@ -48,6 +48,11 @@ class LegacyFeeSettingsViewModel(
         }
     }
 
+    var syncPaused = false
+    fun pauseSync() {
+        syncPaused = true
+    }
+
     fun onSelectGasPrice(gasPrice: Long) {
         gasPriceService.setGasPrice(gasPrice)
     }
@@ -61,6 +66,9 @@ class LegacyFeeSettingsViewModel(
     }
 
     private fun syncTransactionStatus(transactionStatus: DataState<Transaction>) {
+        if (syncPaused) {
+            return
+        }
         syncFeeViewItems(transactionStatus)
     }
 

@@ -56,6 +56,11 @@ class Eip1559FeeSettingsViewModel(
         }
     }
 
+    var syncPaused = false
+    fun pauseSync() {
+        syncPaused = true
+    }
+
     fun onSelectGasPrice(maxFee: Long, priorityFee: Long) {
         gasPriceService.setGasPrice(maxFee, priorityFee)
     }
@@ -111,6 +116,9 @@ class Eip1559FeeSettingsViewModel(
     }
 
     private fun syncTransactionStatus(transactionStatus: DataState<Transaction>) {
+        if (syncPaused) {
+            return
+        }
         syncFeeViewItems(transactionStatus)
     }
 

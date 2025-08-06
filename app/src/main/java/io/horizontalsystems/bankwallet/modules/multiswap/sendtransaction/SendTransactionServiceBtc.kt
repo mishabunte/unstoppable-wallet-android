@@ -203,6 +203,14 @@ class SendTransactionServiceBtc(private val token: Token) : AbstractSendTransact
 
         return SendTransactionResult.Btc(transactionRecord)
     }
+
+    override fun isHardwareAccount(): Boolean {
+        return false
+    }
+
+    override fun pauseSync() {
+        TODO("Not yet implemented")
+    }
 }
 
 @Composable

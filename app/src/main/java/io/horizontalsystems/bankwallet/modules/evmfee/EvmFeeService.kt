@@ -38,6 +38,11 @@ class EvmFeeService(
         MutableSharedFlow(replay = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     override val transactionStatusFlow = _transactionStatusFlow.asSharedFlow()
 
+    var syncPaused = false
+    fun pauseSync() {
+        syncPaused = true
+    }
+
     fun start() {
         coroutineScope.launch {
             gasPriceService.stateFlow.collect {
@@ -56,6 +61,9 @@ class EvmFeeService(
     }
 
     private fun sync() {
+        if (syncPaused) {
+            return
+        }
         when (val gasPriceInfoState = gasPriceInfoState) {
             is DataState.Error -> {
                 _transactionStatusFlow.tryEmit(gasPriceInfoState)

@@ -30,7 +30,16 @@ class SendEvmSettingsViewModel(
         }
     }
 
+    var syncPaused = false
+    fun pauseSync() {
+        syncPaused = true
+        service.pauseSync()
+    }
+
     private fun sync(state: DataState<SendEvmSettingsService.Transaction>) {
+        if (syncPaused) {
+            return
+        }
         when (state) {
             is DataState.Error -> {
                 isRecommendedSettingsSelected = false
@@ -45,6 +54,9 @@ class SendEvmSettingsViewModel(
     }
 
     private fun syncCautions(state: DataState<SendEvmSettingsService.Transaction>) {
+        if (syncPaused) {
+            return
+        }
         val warnings = mutableListOf<Warning>()
         val errors = mutableListOf<Throwable>()
 

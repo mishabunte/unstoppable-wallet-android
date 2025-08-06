@@ -174,6 +174,9 @@ class SendTransactionServiceEvm(
     }
 
     private fun handleTransactionState(transactionState: DataState<SendEvmSettingsService.Transaction>) {
+        if (syncPaused) {
+            return
+        }
         loading = transactionState.loading
         transaction = transactionState.dataOrNull
         feeAmountData = transaction?.let {
@@ -229,6 +232,17 @@ class SendTransactionServiceEvm(
         val fullTransaction = evmKitWrapper
             .sendSingle(transactionData, gasPrice, gasLimit, nonce).await()
         return SendTransactionResult.Evm(fullTransaction)
+    }
+
+    override fun isHardwareAccount(): Boolean {
+        return evmKitWrapper.isHardwareSigner
+    }
+
+    var syncPaused = false
+    override fun pauseSync() {
+        syncPaused = true
+        settingsService.pauseSync()
+        feeService.pauseSync()
     }
 
     fun decorate(transactionData: TransactionData): TransactionDecoration? {
