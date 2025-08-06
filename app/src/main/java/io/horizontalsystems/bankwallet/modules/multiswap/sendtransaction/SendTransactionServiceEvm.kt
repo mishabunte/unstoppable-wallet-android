@@ -9,6 +9,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Icon
 import androidx.compose.runtime.Composable
+import io.reactivex.Single
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -236,6 +237,18 @@ class SendTransactionServiceEvm(
 
     override fun isHardwareAccount(): Boolean {
         return evmKitWrapper.isHardwareSigner
+    }
+
+    fun getUnsignedTransactionHex(): Single<String> {
+        val transaction = transaction ?: throw Exception()
+        if (transaction.errors.isNotEmpty()) throw Exception()
+
+        val transactionData = transaction.transactionData
+        val gasPrice = transaction.gasData.gasPrice
+        val gasLimit = transaction.gasData.gasLimit
+        val nonce = transaction.nonce
+
+        return evmKitWrapper.getUnsignedTransactionHex(transactionData, gasPrice, gasLimit, nonce)
     }
 
     var syncPaused = false
