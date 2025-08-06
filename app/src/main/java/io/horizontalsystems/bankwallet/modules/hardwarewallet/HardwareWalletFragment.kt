@@ -19,6 +19,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import io.horizontalsystems.bankwallet.R
 import io.horizontalsystems.bankwallet.core.BaseComposeFragment
+import io.horizontalsystems.bankwallet.core.getInput
 import io.horizontalsystems.bankwallet.core.slideFromRight
 import io.horizontalsystems.bankwallet.entities.DataState
 import io.horizontalsystems.bankwallet.modules.address.HSAddressInput
@@ -47,11 +48,12 @@ class HardwareWalletFragment : BaseComposeFragment() {
 
     @Composable
     override fun GetContent(navController: NavController) {
+        val input = navController.getInput<ManageAccountsModule.Input>()
         ComposeAppTheme {
             val popUpToInclusiveId =
-                arguments?.getInt(ManageAccountsModule.popOffOnSuccessKey, R.id.hardwareWalletFragment) ?: R.id.hardwareWalletFragment
+                input?.popOffOnSuccess ?: R.id.hardwareWalletFragment
             val inclusive =
-                arguments?.getBoolean(ManageAccountsModule.popOffInclusiveKey) ?: true
+                input?.popOffInclusive ?: true
             HardwareWalletScreen(findNavController(), popUpToInclusiveId, inclusive)
         }
     }
@@ -61,6 +63,7 @@ class HardwareWalletFragment : BaseComposeFragment() {
 @Composable
 fun HardwareWalletScreen(navController: NavController, popUpToInclusiveId: Int, inclusive: Boolean) {
     val view = LocalView.current
+    val input = navController.getInput<ManageAccountsModule.Input>()
 
     val viewModel = viewModel<HardwareWalletViewModel>(factory = HardwareWalletModule.Factory())
     val uiState = viewModel.uiState
@@ -91,8 +94,8 @@ fun HardwareWalletScreen(navController: NavController, popUpToInclusiveId: Int, 
             bundleOf(
                 SelectHardwareBlockchainsModule.accountTypeKey to accountType,
                 SelectHardwareBlockchainsModule.accountNameKey to accountName,
-                ManageAccountsModule.popOffOnSuccessKey to popUpToInclusiveId,
-                ManageAccountsModule.popOffInclusiveKey to inclusive,
+                input?.popOffInclusive.toString() to popUpToInclusiveId,
+                input?.popOffOnSuccess.toString() to inclusive,
             )
         )
     }
@@ -147,7 +150,7 @@ fun HardwareWalletScreen(navController: NavController, popUpToInclusiveId: Int, 
                 Spacer(Modifier.height(32.dp))
 
                 ByMenu(
-                    menuTitle = stringResource(R.string.Watch_By),
+                    menuTitle = stringResource(R.string.Restore_By),
                     menuValue = stringResource(type.titleResId),
                     selectorDialogTitle = stringResource(R.string.Hardware_LinkBy),
                     selectorItems = HardwareWalletViewModel.Type.values().map {
