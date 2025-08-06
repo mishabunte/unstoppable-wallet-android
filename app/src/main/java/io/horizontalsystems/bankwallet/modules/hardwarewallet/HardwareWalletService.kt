@@ -104,6 +104,9 @@ class HardwareWalletService(
                         add(TokenQuery(BlockchainType.ECash, TokenType.Native))
                     }
                 }
+                else -> {
+                    // Unsupported account type
+                }
             }
         }
 

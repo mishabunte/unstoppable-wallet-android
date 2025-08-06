@@ -139,7 +139,7 @@ class HardwareWalletViewModel(
     }
 
     enum class Type(val titleResId: Int, val subtitleResId: Int) {
-        EvmAddressHardware(R.string.Watch_TypeEvmAddress, R.string.Watch_TypeEvmAddress_Subtitle),
+        EvmAddressHardware(R.string.PublicKeys_EvmAddress, R.string.PublicKeys_EvmAddress_Description),
         //TronAddressHardware(R.string.Watch_TypeTronAddress, R.string.Watch_TypeTronAddress_Subtitle),
         //SolanaAddressHardware(R.string.Watch_TypeSolanaAddress, R.string.Watch_TypeSolanaAddress_Subtitle),
         //XPubKeyHardware(R.string.Watch_TypeXPubKey, R.string.Watch_TypeXPubKey_Subtitle),

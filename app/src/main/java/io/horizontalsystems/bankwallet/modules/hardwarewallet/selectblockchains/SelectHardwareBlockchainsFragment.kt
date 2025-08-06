@@ -29,6 +29,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import io.horizontalsystems.bankwallet.R
 import io.horizontalsystems.bankwallet.core.BaseComposeFragment
+import io.horizontalsystems.bankwallet.core.getInput
 import io.horizontalsystems.bankwallet.entities.AccountType
 import io.horizontalsystems.bankwallet.modules.manageaccounts.ManageAccountsModule
 import io.horizontalsystems.bankwallet.ui.compose.ComposeAppTheme
@@ -49,11 +50,12 @@ class SelectHardwareBlockchainsFragment : BaseComposeFragment() {
 
     @Composable
     override fun GetContent(navController: NavController) {
+        val input = navController.getInput<ManageAccountsModule.Input>()
         ComposeAppTheme {
             val popUpToInclusiveId =
-                arguments?.getInt(ManageAccountsModule.popOffOnSuccessKey, R.id.selectHardwareBlockchainsFragment) ?: R.id.selectHardwareBlockchainsFragment
+                input?.popOffOnSuccess ?: R.id.selectHardwareBlockchainsFragment
             val inclusive =
-                arguments?.getBoolean(ManageAccountsModule.popOffInclusiveKey) ?: false
+                input?.popOffInclusive ?: false
             val accountType = arguments?.parcelable<AccountType>(SelectHardwareBlockchainsModule.accountTypeKey)
             val accountName = arguments?.getString(SelectHardwareBlockchainsModule.accountNameKey)
             if (accountType != null) {
@@ -128,7 +130,7 @@ private fun SelectBlockchainsScreen(
                 Spacer(modifier = Modifier.height(12.dp))
                 Divider(
                     thickness = 1.dp,
-                    color = ComposeAppTheme.colors.steel10,
+                    color = ComposeAppTheme.colors.jacob, // TODO: Change color
                 )
             }
             items(blockchainViewItems) { viewItem ->
@@ -160,7 +162,7 @@ private fun SelectBlockchainsScreen(
                                         modifier = Modifier
                                             .padding(start = 6.dp)
                                             .clip(RoundedCornerShape(4.dp))
-                                            .background(ComposeAppTheme.colors.jeremy)
+                                            .background(ComposeAppTheme.colors.jacob) // TODO: Change color
                                     ) {
                                         Text(
                                             modifier = Modifier.padding(
@@ -169,7 +171,7 @@ private fun SelectBlockchainsScreen(
                                                 bottom = 1.dp
                                             ),
                                             text = labelText,
-                                            color = ComposeAppTheme.colors.bran,
+                                            color = ComposeAppTheme.colors.jacob, // TODO: Change color
                                             style = ComposeAppTheme.typography.microSB,
                                             maxLines = 1,
                                         )

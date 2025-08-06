@@ -58,6 +58,7 @@ class SelectHardwareBlockchainsViewModel(
                     coinViewItemForToken(it, label = it.badge)
                 }
             }
+            else -> Unit // Unsupported account type
         }
 
         emitState()

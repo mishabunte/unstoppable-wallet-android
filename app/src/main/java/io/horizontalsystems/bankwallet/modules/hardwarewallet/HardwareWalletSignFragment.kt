@@ -36,6 +36,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,11 +56,11 @@ import io.horizontalsystems.bankwallet.R
 import io.horizontalsystems.bankwallet.core.AppLogger
 import io.horizontalsystems.bankwallet.core.managers.toSignature
 import io.horizontalsystems.bankwallet.core.toHexString
-import io.horizontalsystems.bankwallet.modules.evmfee.EvmFeeCellViewModel
-import io.horizontalsystems.bankwallet.modules.sendevmtransaction.SendEvmTransactionViewModel
-import io.horizontalsystems.bankwallet.modules.walletconnect.request.signmessage.WCSignMessageRequestViewModel
+import io.horizontalsystems.bankwallet.modules.evmfee.eip1559.Eip1559FeeSettingsViewModel as EvmFeeCellViewModel
+import io.horizontalsystems.bankwallet.modules.multiswap.sendtransaction.SendTransactionServiceEvm as SendEvmTransactionViewModel
+//import io.horizontalsystems.bankwallet.modules.walletconnect.request.signmessage.WCSignMessageRequestViewModel
 import io.horizontalsystems.bankwallet.ui.compose.ComposeAppTheme
-import io.horizontalsystems.bankwallet.ui.compose.DisposableLifecycleCallbacks
+//import io.horizontalsystems.bankwallet.ui.compose.animations.
 import io.horizontalsystems.bankwallet.ui.compose.components.ButtonPrimaryYellow
 import io.horizontalsystems.ethereumkit.core.hexStringToByteArray
 import io.horizontalsystems.ethereumkit.models.Signature
@@ -67,20 +68,20 @@ import io.horizontalsystems.ethereumkit.spv.core.toBigInteger
 import io.horizontalsystems.ethereumkit.spv.core.toInt
 import io.horizontalsystems.ethereumkit.spv.rlp.RLP
 import io.horizontalsystems.ethereumkit.spv.rlp.RLPList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.rx2.await
 import java.io.IOException
 import java.nio.charset.Charset
 import java.util.Locale
 
-@OptIn(ExperimentalAnimationGraphicsApi::class)
+//@OptIn(ExperimentalAnimationGraphicsApi::class)
 @Composable
 fun HardwareWalletSignFragment(ownAddress: String,
-    sendViewModel: SendEvmTransactionViewModel? = null, feeModel: EvmFeeCellViewModel? = null,
-                              /* txUnsignedHex: Single<String>? = null,*/ signMessageViewModel: WCSignMessageRequestViewModel? = null) {
+    sendViewModel: SendEvmTransactionViewModel? = null, feeModel: EvmFeeCellViewModel? = null) {
 
     val logger = AppLogger("sign-evm-hardware")
 
-    val txUnsignedHex = sendViewModel?.service?.getUnsignedTransactionHex()
+    val txUnsignedHex = sendViewModel?.getUnsignedTransactionHex()
 
     var isSending by remember { mutableStateOf<Boolean>(false) }
 
@@ -88,13 +89,13 @@ fun HardwareWalletSignFragment(ownAddress: String,
     var txData by remember { mutableStateOf<String?>(null) }
     var messageHex by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(signMessageViewModel) {
-        if (signMessageViewModel != null) {
-            messageHex = signMessageViewModel?.message?.data?.toByteArray().toHexString()
-        } else {
-            messageHex = null
-        }
-    }
+//    LaunchedEffect(signMessageViewModel) {
+//        if (signMessageViewModel != null) {
+//            messageHex = signMessageViewModel?.message?.data?.toByteArray().toHexString()
+//        } else {
+//            messageHex = null
+//        }
+//    }
 
     LaunchedEffect(txUnsignedHex) {
         try {
@@ -110,6 +111,7 @@ fun HardwareWalletSignFragment(ownAddress: String,
     val context = LocalContext.current
     val activity = context as ComponentActivity
     var nfcAdapter : NfcAdapter? = NfcAdapter.getDefaultAdapter(context)
+    val coroutineScope = rememberCoroutineScope()
 
     var pendingIntent: PendingIntent? = PendingIntent.getActivity(
         context, 0,
@@ -124,8 +126,8 @@ fun HardwareWalletSignFragment(ownAddress: String,
                 if (handleNfcIntent(it, ownAddress!!, txData, messageHex)) {
                     scanToTransmit = true
                 } else {
-                    sendViewModel?.service?.setFailed(IOException("NFC Connection Error"))
-                    signMessageViewModel?.showSignError = true
+//                    sendViewModel.set
+//                    signMessageViewModel?.showSignError = true
                 }
             }
         }
@@ -185,20 +187,24 @@ fun HardwareWalletSignFragment(ownAddress: String,
                                 val signature = decodeRawTransactionSignature(txHex)
                                 val signatureHex = signature?.toHex()
                                 isSending = true
-                                sendViewModel?.service?.send(logger, signatureHex)
+                                coroutineScope.launch {
+                                    sendViewModel?.sendTransaction(signatureHex)
+                                }
                             } else if(it.startsWith("evm.sig:")) {
                                 val signatureHex = it.removePrefix("evm.sig:")
                                 isSending = true
                                 if (messageHex == null) {
-                                    sendViewModel?.service?.send(logger, signatureHex)
+                                    coroutineScope.launch {
+                                        sendViewModel?.sendTransaction(signatureHex)
+                                    }
                                 } else {
                                     val signature = signatureHex.toSignature()
                                     val shex = signature?.toByteArray().toHexString()
                                     //signMessageViewModel?.acceptWithSignature(shex!!)
                                 }
                             } else {
-                                sendViewModel?.service?.setFailed(IOException("Signature Scan Error"))
-                                signMessageViewModel?.showSignError = true
+//                                sendViewModel?.service?.setFailed(IOException("Signature Scan Error"))
+//                                signMessageViewModel?.showSignError = true
                             }
                         })
                     }
@@ -344,10 +350,10 @@ private fun ScannerView(onScan: (String) -> Unit) {
         AndroidView(factory = { barcodeView })
     }
 
-    DisposableLifecycleCallbacks(
-        onResume = barcodeView::resume,
-        onPause = barcodeView::pause
-    )
+//    DisposableLifecycleCallbacks(
+//        onResume = barcodeView::resume,
+//        onPause = barcodeView::pause
+//    )
 }
 
 fun Signature.toHex(): String {
