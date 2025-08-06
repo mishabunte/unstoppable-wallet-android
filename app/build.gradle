@@ -254,6 +254,7 @@ dependencies {
 
     //AppWidgets
     implementation 'androidx.glance:glance-appwidget:1.1.1'
+    implementation 'androidx.compose.animation:animation-graphics-android:1.8.3'
 
     // Room
     def room_version = '2.7.1'
