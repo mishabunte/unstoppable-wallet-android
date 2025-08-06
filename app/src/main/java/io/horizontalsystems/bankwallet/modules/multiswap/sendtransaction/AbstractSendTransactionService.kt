@@ -25,7 +25,7 @@ abstract class AbstractSendTransactionService: ServiceState<SendTransactionServi
     abstract fun setSendTransactionData(data: SendTransactionData)
     @Composable
     abstract fun GetSettingsContent(navController: NavController)
-    abstract suspend fun sendTransaction() : SendTransactionResult
+    abstract suspend fun sendTransaction(signatureHex: String? = null) : SendTransactionResult
     abstract fun isHardwareAccount(): Boolean
     abstract fun pauseSync()
 
