@@ -64,8 +64,8 @@ class SendEvmConfirmationViewModel(
         sectionViewItems = sectionViewItems
     )
 
-    suspend fun send() = withContext(Dispatchers.Default) {
-        sendTransactionService.sendTransaction()
+    suspend fun send(signatureHex: String? = null) = withContext(Dispatchers.Default) {
+        sendTransactionService.sendTransaction(signatureHex)
 
         val address = when (transactionDecoration) {
             is OutgoingEip20Decoration -> {
