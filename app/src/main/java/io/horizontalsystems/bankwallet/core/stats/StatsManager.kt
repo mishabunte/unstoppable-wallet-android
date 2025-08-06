@@ -259,6 +259,34 @@ val AccountType.statAccountType: String
             }
         }
 
+        is AccountType.Cex -> {
+            "cex"
+        }
+
+        is AccountType.EvmAddressHardware -> {
+            "evm_address_hardware"
+        }
+
+        is AccountType.HdExtendedKeyHardware -> {
+            if (hdExtendedKey.isPublic) {
+                "account_x_pub_key_hardware"
+            } else {
+                when (hdExtendedKey.derivedType) {
+                    HDExtendedKey.DerivedType.Bip32 -> "bip32_hardware"
+                    HDExtendedKey.DerivedType.Master -> "bip32_root_key_hardware"
+                    HDExtendedKey.DerivedType.Account -> "account_x_priv_key_hardware"
+                }
+            }
+        }
+
+        is AccountType.SolanaAddressHardware -> {
+            "sol_address_hardware"
+        }
+
+        is AccountType.TronAddressHardware -> {
+            "tron_address_hardware"
+        }
+
         is AccountType.SolanaAddress -> {
             "sol_address"
         }
