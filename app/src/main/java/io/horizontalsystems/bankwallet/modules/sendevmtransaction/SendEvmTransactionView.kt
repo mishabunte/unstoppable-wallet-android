@@ -17,6 +17,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import io.horizontalsystems.bankwallet.R
 import io.horizontalsystems.bankwallet.core.ethereum.CautionViewItem
@@ -31,6 +32,7 @@ import io.horizontalsystems.bankwallet.modules.multiswap.ui.DataField
 import io.horizontalsystems.bankwallet.modules.multiswap.ui.DataFieldFee
 import io.horizontalsystems.bankwallet.modules.send.SendModule
 import io.horizontalsystems.bankwallet.modules.send.evm.settings.SendEvmNonceViewModel
+import io.horizontalsystems.bankwallet.modules.send.evm.settings.SendEvmSettingsViewModel
 import io.horizontalsystems.bankwallet.ui.compose.ComposeAppTheme
 import io.horizontalsystems.bankwallet.ui.compose.components.ButtonSecondaryDefault
 import io.horizontalsystems.bankwallet.ui.compose.components.CellUniversalLawrenceSection
@@ -93,14 +95,16 @@ fun SendEvmTransactionView(
             Cautions(cautions)
         }
 
-        val viewModel = null // TODO: Add viewModel for HW wallet
+//        val transactionViewModel = viewModel<SendEvmSettingsViewModel>()
 
-        if ((cautions == null || cautions?.size == 0) && v)
-        {
-            HardwareWalletSignFragment(ownAddress = transactionViewModel.service.ownAddress.eip55,
-                transactionViewModel, feeCellViewModel,
-            )
-        }
+//        val viewModel =  // TODO: Add viewModel for HW wallet
+//
+//        if ((cautions == null || cautions?.size == 0) && tr)
+//        {
+//            HardwareWalletSignFragment(ownAddress = transactionViewModel,
+//                transactionViewModel, feeCellViewModel,
+//            )
+//        }
     }
 }
 
