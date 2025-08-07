@@ -1,5 +1,7 @@
 package io.horizontalsystems.bankwallet.modules.hardwarewallet.selectblockchains
 
+import android.os.Parcelable
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -30,13 +32,17 @@ import androidx.navigation.NavController
 import io.horizontalsystems.bankwallet.R
 import io.horizontalsystems.bankwallet.core.BaseComposeFragment
 import io.horizontalsystems.bankwallet.core.getInput
+import io.horizontalsystems.bankwallet.core.getInputX
+import io.horizontalsystems.bankwallet.core.requireInput
 import io.horizontalsystems.bankwallet.entities.AccountType
 import io.horizontalsystems.bankwallet.modules.manageaccounts.ManageAccountsModule
+import io.horizontalsystems.bankwallet.modules.watchaddress.selectblockchains.SelectBlockchainsFragment.Input
 import io.horizontalsystems.bankwallet.ui.compose.ComposeAppTheme
 import io.horizontalsystems.bankwallet.ui.compose.TranslatableString
 import io.horizontalsystems.bankwallet.ui.compose.components.AppBar
 import io.horizontalsystems.bankwallet.ui.compose.components.CellMultilineClear
 import io.horizontalsystems.bankwallet.ui.compose.components.HsBackButton
+import io.horizontalsystems.bankwallet.ui.compose.components.HsDivider
 import io.horizontalsystems.bankwallet.ui.compose.components.HsSwitch
 import io.horizontalsystems.bankwallet.ui.compose.components.MenuItem
 import io.horizontalsystems.bankwallet.ui.compose.components.body_leah
@@ -45,33 +51,30 @@ import io.horizontalsystems.core.findNavController
 import io.horizontalsystems.core.helpers.HudHelper
 import io.horizontalsystems.core.parcelable
 import kotlinx.coroutines.delay
+import kotlinx.parcelize.Parcelize
 
 class SelectHardwareBlockchainsFragment : BaseComposeFragment() {
 
     @Composable
     override fun GetContent(navController: NavController) {
-        val input = navController.getInput<ManageAccountsModule.Input>()
-        ComposeAppTheme {
-            val popUpToInclusiveId =
-                input?.popOffOnSuccess ?: R.id.selectHardwareBlockchainsFragment
-            val inclusive =
-                input?.popOffInclusive ?: false
-            val accountType = arguments?.parcelable<AccountType>(SelectHardwareBlockchainsModule.accountTypeKey)
-            val accountName = arguments?.getString(SelectHardwareBlockchainsModule.accountNameKey)
-            if (accountType != null) {
-                SelectBlockchainsScreen(
-                    accountType,
-                    accountName,
-                    findNavController(),
-                    popUpToInclusiveId,
-                    inclusive
-                )
-            } else {
-                findNavController().popBackStack()
-            }
+        withInput<Input>(navController) { input ->
+            SelectBlockchainsScreen(
+                input.accountType,
+                input.accountName,
+                navController,
+                input.popOffOnSuccess,
+                input.popOffInclusive
+            )
         }
     }
 
+    @Parcelize
+    data class Input(
+        val popOffOnSuccess: Int,
+        val popOffInclusive: Boolean,
+        val accountType: AccountType,
+        val accountName: String?,
+    ) : Parcelable
 }
 
 @Composable
@@ -128,10 +131,7 @@ private fun SelectBlockchainsScreen(
         ) {
             item {
                 Spacer(modifier = Modifier.height(12.dp))
-                Divider(
-                    thickness = 1.dp,
-                    color = ComposeAppTheme.colors.jacob, // TODO: Change color
-                )
+                HsDivider()
             }
             items(blockchainViewItems) { viewItem ->
                 CellMultilineClear(

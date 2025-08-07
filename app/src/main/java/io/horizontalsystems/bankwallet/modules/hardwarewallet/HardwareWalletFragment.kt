@@ -1,5 +1,6 @@
 package io.horizontalsystems.bankwallet.modules.hardwarewallet
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -23,6 +24,7 @@ import io.horizontalsystems.bankwallet.core.getInput
 import io.horizontalsystems.bankwallet.core.slideFromRight
 import io.horizontalsystems.bankwallet.entities.DataState
 import io.horizontalsystems.bankwallet.modules.address.HSAddressInput
+import io.horizontalsystems.bankwallet.modules.hardwarewallet.selectblockchains.SelectHardwareBlockchainsFragment
 import io.horizontalsystems.bankwallet.modules.manageaccounts.ManageAccountsModule
 import io.horizontalsystems.bankwallet.modules.restoreaccount.restoremenu.ByMenu
 import io.horizontalsystems.bankwallet.modules.hardwarewallet.selectblockchains.SelectHardwareBlockchainsModule
@@ -87,16 +89,24 @@ fun HardwareWalletScreen(navController: NavController, popUpToInclusiveId: Int, 
     }
 
     if (accountType != null) {
+        Log.d("HardwareWalletFragment", "accountType: $accountType, accountName: $accountName, popUpToInclusiveId: $popUpToInclusiveId, inclusive: $inclusive")
         viewModel.blockchainSelectionOpened()
+        Log.d("HardwareWalletFragment", "Navigating to SelectHardwareBlockchainsFragment")
 
         navController.slideFromRight(
             R.id.selectHardwareBlockchainsFragment,
-            bundleOf(
-                SelectHardwareBlockchainsModule.accountTypeKey to accountType,
-                SelectHardwareBlockchainsModule.accountNameKey to accountName,
-                input?.popOffInclusive.toString() to popUpToInclusiveId,
-                input?.popOffOnSuccess.toString() to inclusive,
+            SelectHardwareBlockchainsFragment.Input(
+                popOffOnSuccess = popUpToInclusiveId,
+                popOffInclusive = inclusive,
+                accountType = accountType,
+                accountName = accountName
             )
+//            bundleOf(
+//                SelectHardwareBlockchainsModule.accountTypeKey to accountType,
+//                SelectHardwareBlockchainsModule.accountNameKey to accountName,
+//                "bibibububaba" to popUpToInclusiveId,
+//                "bibibububaba2" to inclusive,
+//            )
         )
     }
 
