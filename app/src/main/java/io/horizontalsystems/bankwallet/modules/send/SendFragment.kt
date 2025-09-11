@@ -115,6 +115,7 @@ class SendFragment : BaseFragment() {
                     BlockchainType.ZkSync,
                     BlockchainType.Gnosis,
                     BlockchainType.Fantom,
+                    BlockchainType.NexusTestnetIII,
                     BlockchainType.ArbitrumOne -> {
                         setContent {
                             SendEvmScreen(

@@ -7,8 +7,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.Icon
-import androidx.compose.material.Text
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -17,7 +17,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import io.horizontalsystems.bankwallet.R
 import io.horizontalsystems.bankwallet.core.ethereum.CautionViewItem
@@ -27,10 +26,14 @@ import io.horizontalsystems.bankwallet.core.stats.StatEvent
 import io.horizontalsystems.bankwallet.core.stats.StatPage
 import io.horizontalsystems.bankwallet.core.stats.stat
 import io.horizontalsystems.bankwallet.modules.evmfee.Cautions
+import io.horizontalsystems.bankwallet.modules.evmfee.eip1559.Eip1559FeeSettingsViewModel
+import io.horizontalsystems.bankwallet.modules.hardwarewallet.HardwareWalletSendCautions
 import io.horizontalsystems.bankwallet.modules.hardwarewallet.HardwareWalletSignFragment
+import io.horizontalsystems.bankwallet.modules.hardwarewallet.HardwareWalletSignScanFragment
 import io.horizontalsystems.bankwallet.modules.multiswap.ui.DataField
 import io.horizontalsystems.bankwallet.modules.multiswap.ui.DataFieldFee
 import io.horizontalsystems.bankwallet.modules.send.SendModule
+import io.horizontalsystems.bankwallet.modules.send.evm.confirmation.SendEvmConfirmationViewModel
 import io.horizontalsystems.bankwallet.modules.send.evm.settings.SendEvmNonceViewModel
 import io.horizontalsystems.bankwallet.modules.send.evm.settings.SendEvmSettingsViewModel
 import io.horizontalsystems.bankwallet.ui.compose.ComposeAppTheme
@@ -66,7 +69,9 @@ fun SendEvmTransactionView(
     cautions: List<CautionViewItem>,
     transactionFields: List<DataField>,
     networkFee: SendModule.AmountData?,
-    statPage: StatPage
+    statPage: StatPage,
+    isHardwareSigner: Boolean = false,
+    scanToTransmit: Boolean = false,
 ) {
     Column {
         items.forEach { sectionViewItem ->
@@ -94,17 +99,15 @@ fun SendEvmTransactionView(
         if (cautions.isNotEmpty()) {
             Cautions(cautions)
         }
-
-//        val transactionViewModel = viewModel<SendEvmSettingsViewModel>()
-
-//        val viewModel =  // TODO: Add viewModel for HW wallet
-//
-//        if ((cautions == null || cautions?.size == 0) && tr)
-//        {
-//            HardwareWalletSignFragment(ownAddress = transactionViewModel,
-//                transactionViewModel, feeCellViewModel,
-//            )
-//        }
+        VSpacer(height = 16.dp)
+        if (isHardwareSigner && scanToTransmit) {
+            SectionUniversalLawrence {
+                HardwareWalletSendCautions(
+                    Modifier
+                        .padding(horizontal = 8.dp, vertical = 8.dp)
+                )
+            }
+        }
     }
 }
 

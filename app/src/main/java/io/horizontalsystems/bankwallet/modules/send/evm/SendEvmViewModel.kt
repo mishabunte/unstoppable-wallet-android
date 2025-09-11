@@ -69,6 +69,10 @@ class SendEvmViewModel(
         emitState()
     }
 
+    fun isHardwareSigner(): Boolean {
+        return adapter.isHardwareSigner()
+    }
+
     private fun handleUpdatedAddressState(addressState: SendEvmAddressService.State) {
         this.addressState = addressState
 

@@ -136,7 +136,8 @@ fun SendEvmScreen(
                                 sendData,
                                 viewModel.wallet.token.blockchainType,
                                 navController,
-                                sendEntryPointDestId
+                                sendEntryPointDestId,
+                                viewModel.isHardwareSigner()
                             )
                         }
                     } else {
@@ -144,7 +145,8 @@ fun SendEvmScreen(
                             sendData,
                             viewModel.wallet.token.blockchainType,
                             navController,
-                            sendEntryPointDestId
+                            sendEntryPointDestId,
+                            viewModel.isHardwareSigner()
                         )
                     }
                 },
@@ -158,14 +160,16 @@ private fun openSendConfirm(
     sendEvmData: SendEvmData,
     blockchainType: BlockchainType,
     navController: NavController,
-    sendEntryPointDestId: Int
+    sendEntryPointDestId: Int,
+    isHardwareSigner: Boolean = false
 ) {
     navController.slideFromRight(
         R.id.sendEvmConfirmationFragment,
         SendEvmConfirmationFragment.Input(
             sendData = sendEvmData,
             blockchainType = blockchainType,
-            sendEntryPointDestId = sendEntryPointDestId
+            sendEntryPointDestId = sendEntryPointDestId,
+            isHardwareSigner = isHardwareSigner
         )
     )
 }

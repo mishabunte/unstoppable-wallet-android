@@ -32,7 +32,8 @@ class SendEvmConfirmationViewModel(
     private val transactionData: TransactionData,
     private val additionalInfo: SendEvmData.AdditionalInfo?,
     private val recentAddressManager: RecentAddressManager,
-    private val blockchainType: BlockchainType
+    private val blockchainType: BlockchainType,
+    val isHardwareSigner: Boolean = false
 ) : ViewModelUiState<SendEvmConfirmationUiState>() {
     private var sendTransactionState = sendTransactionService.stateFlow.value
 
@@ -64,6 +65,12 @@ class SendEvmConfirmationViewModel(
         sectionViewItems = sectionViewItems
     )
 
+    fun sendAsync(signatureHex: String? = null) {
+        viewModelScope.launch {
+            send(signatureHex)
+        }
+    }
+
     suspend fun send(signatureHex: String? = null) = withContext(Dispatchers.Default) {
         sendTransactionService.sendTransaction(signatureHex)
 
@@ -94,7 +101,8 @@ class SendEvmConfirmationViewModel(
     class Factory(
         private val transactionData: TransactionData,
         private val additionalInfo: SendEvmData.AdditionalInfo?,
-        private val blockchainType: BlockchainType
+        private val blockchainType: BlockchainType,
+        private val isHardwareSigner: Boolean = false
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -120,7 +128,8 @@ class SendEvmConfirmationViewModel(
                 transactionData,
                 additionalInfo,
                 App.recentAddressManager,
-                blockchainType
+                blockchainType,
+                isHardwareSigner
             ) as T
         }
     }
