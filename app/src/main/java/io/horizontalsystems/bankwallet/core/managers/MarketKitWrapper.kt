@@ -296,8 +296,8 @@ class MarketKitWrapper(
 
     // Etf
 
-    fun etfs(currencyCode: String) = marketKit.etfSingle(currencyCode)
+    fun etfs(currencyCode: String) = marketKit.etfSingle("eth", currencyCode) // "eth" is a placeholder for the blockchain type
 
-    fun etfPoints(currencyCode: String) = marketKit.etfPointSingle(currencyCode)
+    fun etfPoints(currencyCode: String) = marketKit.etfPointSingle("eth", currencyCode, HsTimePeriod.Month1.value) // "eth" and period are placeholders
 
 }
