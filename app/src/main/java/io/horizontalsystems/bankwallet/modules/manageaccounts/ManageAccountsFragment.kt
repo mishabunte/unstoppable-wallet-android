@@ -124,6 +124,12 @@ fun ManageAccountsScreen(navController: NavController, mode: ManageAccountsModul
                             page = StatPage.ManageWallets,
                             event = StatEvent.Open(StatPage.WatchWallet)
                         )
+                    },
+                    ActionViewItem(R.drawable.icon_font_awesome_5_solid_shield_alt_20, R.string.ManageAccounts_HardwareWalletAuthentication) {
+                        navController.slideFromRight(R.id.hardwareWalletAuthenticationFragment, args)
+                    },
+                    ActionViewItem(R.drawable.ic_download_20, R.string.ManageAccounts_HardwareWalletFirmwareUpgrade) {
+                        navController.slideFromRight(R.id.hardwareWalletFirmwareUpgradeInitialFragment, args)
                     }
                 )
                 CellUniversalLawrenceSection(actions) {

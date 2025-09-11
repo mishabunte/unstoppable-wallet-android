@@ -107,6 +107,16 @@ fun BalanceNoAccount(navController: NavController) {
                 stat(page = StatPage.Balance, event = StatEvent.Open(StatPage.WatchWallet))
             }
         )
+        Spacer(modifier = Modifier.height(16.dp))
+        ButtonPrimaryTransparent(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 48.dp),
+            title = stringResource(R.string.ManageAccounts_HardwareWalletAuthentication),
+            onClick = {
+                navController.slideFromRight(R.id.hardwareWalletAuthenticationFragment)
+            }
+        )
 
     }
 }
