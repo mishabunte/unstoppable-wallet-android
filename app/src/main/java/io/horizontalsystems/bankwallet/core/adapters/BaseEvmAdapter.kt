@@ -41,6 +41,10 @@ abstract class BaseEvmAdapter(
     override val isMainNet: Boolean
         get() = evmKit.chain.isMainNet
 
+    override fun isHardwareSigner(): Boolean {
+        return evmKitWrapper.isHardwareSigner
+    }
+
     protected fun balanceInBigDecimal(balance: BigInteger?, decimal: Int): BigDecimal {
         balance?.toBigDecimal()?.let {
             return scaleDown(it, decimal)
