@@ -406,6 +406,13 @@ sealed class AccountType : Parcelable {
         else -> null
     }
 
+    fun solanaAddress() = when (this) {
+        is Mnemonic -> io.horizontalsystems.solanakit.Signer.address(seed)
+        is SolanaAddress -> address
+        is SolanaAddressHardware -> address
+        else -> null
+    }
+
     fun sign(message: ByteArray, isLegacy: Boolean = false): ByteArray? {
         val signer = when (this) {
             is Mnemonic -> {
