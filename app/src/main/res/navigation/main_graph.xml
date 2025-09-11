@@ -5,6 +5,18 @@
     app:startDestination="@id/mainFragment">
 
     <fragment
+        android:id="@+id/hardwareWalletAuthenticationFragment"
+        android:name="io.horizontalsystems.bankwallet.modules.hardwarewallet.HardwareWalletAuthenticationFragment" />
+    <fragment
+        android:id="@+id/hardwareWalletFirmwareUpgradeInitialFragment"
+        android:name="io.horizontalsystems.bankwallet.modules.hardwarewallet.firmwareupgrade.ui.HardwareWalletFirmwareUpgradeInitialFragment" />
+    <fragment
+        android:id="@+id/hardwareWalletSelectDeviceFragment"
+        android:name="io.horizontalsystems.bankwallet.modules.hardwarewallet.firmwareupgrade.ui.HardwareWalletSelectDeviceFragment" />
+    <fragment
+        android:id="@+id/hardwareWalletFirmwareUpgradeFragment"
+        android:name="io.horizontalsystems.bankwallet.modules.hardwarewallet.firmwareupgrade.ui.HardwareWalletFirmwareUpgradeFragment" />
+    <fragment
         android:id="@+id/mainFragment"
         android:name="io.horizontalsystems.bankwallet.modules.main.MainFragment"/>
     <fragment
