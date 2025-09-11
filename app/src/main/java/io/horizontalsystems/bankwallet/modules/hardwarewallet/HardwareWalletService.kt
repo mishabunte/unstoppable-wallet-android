@@ -43,7 +43,7 @@ class HardwareWalletService(
                 }
 
                 is AccountType.EvmAddress, is AccountType.EvmAddressHardware -> {
-                    evmBlockchainManager.allMainNetBlockchains.forEach { blockchain ->
+                    evmBlockchainManager.allBlockchains.forEach { blockchain ->
                         if (blockchain.type.supports(accountType)) {
                             add(TokenQuery(blockchain.type, TokenType.Native))
                         }
