@@ -29,6 +29,8 @@ import io.horizontalsystems.marketkit.models.Token
 import io.horizontalsystems.marketkit.models.TokenType
 import io.horizontalsystems.solanakit.SolanaKit
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.math.BigDecimal
@@ -56,6 +58,10 @@ class SendSolanaViewModel(
 
     private var amountState = amountService.stateFlow.value
     private var addressState = addressService.stateFlow.value
+    private val _unsignedTxHex = MutableStateFlow<String?>(null)
+    private val _signedTxHex = MutableStateFlow<String?>(null)
+    val unsignedTxHex: StateFlow<String?> = _unsignedTxHex
+    private var scannedQr: String? = null
 
     var coinRate by mutableStateOf(xRateService.getRate(sendToken.coin.uid))
         private set
@@ -100,6 +106,11 @@ class SendSolanaViewModel(
         addressService.setAddress(address)
     }
 
+    fun setScannedQr(value: String?) {
+        scannedQr = value
+    }
+
+
     fun getConfirmationData(): SendConfirmationData {
         val address = addressState.address!!
         val contact = contactsRepo.getContactsFiltered(
@@ -116,6 +127,16 @@ class SendSolanaViewModel(
             memo = null
         )
     }
+
+    fun getUnsignedTransaction(to: String, amount: BigDecimal) {
+        val from = wallet.account.type.solanaAddress() ?: throw IllegalStateException("Solana address is not set")
+        val to = addressState.solanaAddress.toString()
+        viewModelScope.launch {
+            val hex = adapter.getUnsignedTransaction(from, to, amount)
+            _unsignedTxHex.value = hex
+        }
+    }
+
 
     fun onClickSend() {
         viewModelScope.launch {
@@ -141,7 +162,11 @@ class SendSolanaViewModel(
             if (totalSolAmount > solBalance)
                 throw EvmError.InsufficientBalanceWithFee
 
-            adapter.send(decimalAmount, addressState.solanaAddress!!)
+            if (adapter.isHardwareAccount())
+                adapter.sendRawTransaction(scannedQr!!)
+            else {
+                adapter.send(decimalAmount, addressState.solanaAddress!!)
+            }
 
             sendResult = SendResult.Sent()
 
@@ -150,6 +175,11 @@ class SendSolanaViewModel(
             sendResult = SendResult.Failed(createCaution(e))
         }
     }
+
+    fun isHardwareAccount() : Boolean {
+        return adapter.isHardwareAccount()
+    }
+
 
     private fun createCaution(error: Throwable) = when (error) {
         is UnknownHostException -> HSCaution(TranslatableString.ResString(R.string.Hud_Text_NoInternet))

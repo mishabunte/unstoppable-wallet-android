@@ -14,7 +14,7 @@ import kotlinx.coroutines.rx2.asFlowable
 import java.math.BigDecimal
 import java.math.BigInteger
 
-class SolanaAdapter(kitWrapper: SolanaKitWrapper) : BaseSolanaAdapter(kitWrapper, decimal), ISendSolanaAdapter {
+class SolanaAdapter(private val kitWrapper: SolanaKitWrapper) : BaseSolanaAdapter(kitWrapper, decimal), ISendSolanaAdapter {
 
     // IAdapter
 
@@ -45,6 +45,19 @@ class SolanaAdapter(kitWrapper: SolanaKitWrapper) : BaseSolanaAdapter(kitWrapper
         get() = solanaKit.balanceFlow.map {}.asFlowable()
 
     // ISendSolanaAdapter
+    override suspend fun getUnsignedTransaction(from: String, to: String, amount: BigDecimal): String {
+        return kitWrapper.createUnsignedTransactionHex(from, to, amount)
+    }
+
+    override fun isHardwareAccount(): Boolean {
+        return kitWrapper.isHardwareSigner
+    }
+
+    @kotlin.io.encoding.ExperimentalEncodingApi
+    override suspend fun sendRawTransaction(txHex: String): String {
+        return kitWrapper.sendRawTransaction(txHex)?: throw Exception("Failed to send transaction")
+    }
+
     override val availableBalance: BigDecimal
         get() {
             val availableBalance = balanceData.available - SolanaKit.fee - SolanaKit.accountRentAmount
