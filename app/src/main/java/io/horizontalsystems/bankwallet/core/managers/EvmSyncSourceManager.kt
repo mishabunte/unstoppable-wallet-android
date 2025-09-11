@@ -40,6 +40,7 @@ class EvmSyncSourceManager(
             BlockchainType.Fantom -> TransactionSource.fantom(appConfigProvider.ftmscanApiKey)
             BlockchainType.Base -> TransactionSource.basescan(appConfigProvider.basescanApiKey)
             BlockchainType.ZkSync -> TransactionSource.eraZkSync(appConfigProvider.eraZkSyncApiKey)
+            BlockchainType.NexusTestnetIII -> TransactionSource.nexus(appConfigProvider.etherscanApiKey) // TODO: Nexus API key
             else -> throw Exception("Non-supported EVM blockchain")
         }
     }
@@ -207,6 +208,15 @@ class EvmSyncSourceManager(
                     blockchainType,
                     "Ankr",
                     RpcSource.Http(listOf(URI("https://rpc.ankr.com/gnosis")), null),
+                    defaultTransactionSource(blockchainType)
+                )
+            )
+
+            BlockchainType.NexusTestnetIII -> listOf(
+                evmSyncSource(
+                    blockchainType,
+                    "Nexus",
+                    RpcSource.Http(listOf(URI("https://testnet3.rpc.nexus.xyz")), null),
                     defaultTransactionSource(blockchainType)
                 )
             )

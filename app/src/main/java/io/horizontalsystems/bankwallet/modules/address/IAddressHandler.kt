@@ -116,6 +116,7 @@ class AddressHandlerUdn(
             BlockchainType.Avalanche,
             BlockchainType.Gnosis,
             BlockchainType.Fantom,
+            BlockchainType.NexusTestnetIII,
             BlockchainType.ArbitrumOne -> "ETH"
 
             BlockchainType.Bitcoin -> "BTC"

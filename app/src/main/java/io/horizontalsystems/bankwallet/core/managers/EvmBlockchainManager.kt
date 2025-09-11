@@ -54,6 +54,7 @@ class EvmBlockchainManager(
         BlockchainType.ArbitrumOne -> Chain.ArbitrumOne
         BlockchainType.Gnosis -> Chain.Gnosis
         BlockchainType.Fantom -> Chain.Fantom
+        BlockchainType.NexusTestnetIII -> Chain.Nexus
         else -> throw IllegalArgumentException("Unsupported blockchain type $blockchainType")
     }
 
@@ -77,6 +78,7 @@ class EvmBlockchainManager(
 
     companion object{
         val blockchainTypes = listOf(
+            BlockchainType.NexusTestnetIII,
             BlockchainType.Ethereum,
             BlockchainType.BinanceSmartChain,
             BlockchainType.Polygon,
@@ -86,7 +88,7 @@ class EvmBlockchainManager(
             BlockchainType.Gnosis,
             BlockchainType.Fantom,
             BlockchainType.Base,
-            BlockchainType.ZkSync,
+            BlockchainType.ZkSync
         )
     }
 }
