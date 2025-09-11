@@ -59,6 +59,7 @@ class AddressHandlerFactory(
             BlockchainType.ZkSync,
             BlockchainType.Gnosis,
             BlockchainType.Fantom,
+            BlockchainType.NexusTestnetIII,
             BlockchainType.ArbitrumOne -> {
                 addressHandlers.add(AddressHandlerEvm(blockchainType))
             }

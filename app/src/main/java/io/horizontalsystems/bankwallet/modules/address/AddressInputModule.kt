@@ -72,6 +72,7 @@ object AddressInputModule {
                 BlockchainType.Base,
                 BlockchainType.ZkSync,
                 BlockchainType.Gnosis,
+                BlockchainType.NexusTestnetIII,
                 BlockchainType.Fantom,
                 BlockchainType.ArbitrumOne -> {
                     addressParserChain.addHandler(AddressHandlerEvm(blockchainType))

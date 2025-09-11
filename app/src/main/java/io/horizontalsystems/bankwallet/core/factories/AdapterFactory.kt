@@ -154,6 +154,7 @@ class AdapterFactory(
             BlockchainType.ZkSync,
             BlockchainType.Gnosis,
             BlockchainType.Fantom,
+            BlockchainType.NexusTestnetIII,
             BlockchainType.ArbitrumOne -> {
                 getEvmAdapter(wallet)
             }
@@ -199,6 +200,7 @@ class AdapterFactory(
         val solanaKitWrapper = solanaKitManager.getSolanaKitWrapper(source.account)
         val baseToken = coinManager.getToken(TokenQuery(BlockchainType.Solana, TokenType.Native)) ?: return null
         val solanaTransactionConverter = SolanaTransactionConverter(coinManager, source, baseToken, solanaKitWrapper)
+        Log.d("AdapterFactory", "solanaTransactionsAdapter: got converter")
 
         return SolanaTransactionsAdapter(solanaKitWrapper, solanaTransactionConverter)
     }
