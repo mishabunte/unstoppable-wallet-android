@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,11 +11,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.Text
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,10 +27,7 @@ import io.horizontalsystems.bankwallet.core.BaseComposeFragment
 import io.horizontalsystems.bankwallet.core.slideFromRight
 import io.horizontalsystems.bankwallet.ui.compose.ComposeAppTheme
 import io.horizontalsystems.bankwallet.ui.compose.components.AppBar
-import io.horizontalsystems.bankwallet.modules.hardwarewallet.NumeratedList
-import io.horizontalsystems.bankwallet.modules.hardwarewallet.firmwareupgrade.ble.HitoDevice
 import io.horizontalsystems.bankwallet.ui.compose.components.ButtonPrimaryDefault
-import io.horizontalsystems.bankwallet.ui.compose.components.ButtonPrimaryTransparent
 import io.horizontalsystems.bankwallet.ui.compose.components.HsBackButton
 
 class HardwareWalletFirmwareUpgradeInitialFragment : BaseComposeFragment() {
@@ -120,19 +113,6 @@ private fun HardwareWalletFirmwareUpgradeInitialScreen(navController: NavControl
             }
 
             Column(Modifier.align(Alignment.BottomCenter)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth()
-                        .padding(horizontal = 32.dp),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                Spacer(Modifier.weight(0.5f))
-                    ButtonPrimaryTransparent(
-                        modifier = Modifier,
-                        title = "Expert Mode",
-                        onClick = {
-                        }
-                    )
-                }
                 ButtonPrimaryDefault(
                     modifier = Modifier
                         .fillMaxWidth()
