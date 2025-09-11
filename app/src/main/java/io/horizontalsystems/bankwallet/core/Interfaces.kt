@@ -377,6 +377,7 @@ interface ISendBitcoinAdapter {
 interface ISendEthereumAdapter {
     val evmKitWrapper: EvmKitWrapper
     val balanceData: BalanceData
+    fun isHardwareSigner(): Boolean
 
     fun getTransactionData(amount: BigDecimal, address: Address): TransactionData
 }
@@ -399,7 +400,10 @@ interface IAdapter {
 
 interface ISendSolanaAdapter {
     val availableBalance: BigDecimal
+    fun isHardwareAccount(): Boolean
+    suspend fun getUnsignedTransaction(from: String, to: String, amount: BigDecimal): String
     suspend fun send(amount: BigDecimal, to: SolanaAddress): FullTransaction
+    suspend fun sendRawTransaction(txHex: String): String
 }
 
 interface ISendTonAdapter {
