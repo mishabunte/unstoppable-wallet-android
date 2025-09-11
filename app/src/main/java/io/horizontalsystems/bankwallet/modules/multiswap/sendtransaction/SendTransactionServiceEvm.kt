@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import io.reactivex.schedulers.Schedulers
 import androidx.compose.material.Icon
 import androidx.compose.runtime.Composable
 import io.reactivex.Single
@@ -59,9 +60,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.rx2.await
+import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 
 class SendTransactionServiceEvm(
@@ -122,6 +127,10 @@ class SendTransactionServiceEvm(
     private var sendable = false
     private var loading = true
     private var fields = listOf<DataField>()
+
+    fun ownAddress(): String {
+        return evmKitWrapper.evmKit.receiveAddress.eip55
+    }
 
     override fun createState() = SendTransactionServiceState(
         uuid = uuid,
@@ -230,25 +239,38 @@ class SendTransactionServiceEvm(
         val gasLimit = transaction.gasData.gasLimit
         val nonce = transaction.nonce
 
-        val fullTransaction = evmKitWrapper
-            .sendSingle(transactionData, gasPrice, gasLimit, nonce, signatureHex).await()
-        return SendTransactionResult.Evm(fullTransaction)
+        return withContext(Dispatchers.IO) {
+            try {
+                val fullTransaction = evmKitWrapper
+                    .sendSingle(transactionData, gasPrice, gasLimit, nonce, signatureHex)
+                    .await()
+                SendTransactionResult.Evm(fullTransaction)
+            } catch (t: Throwable) {
+                throw Exception("Failed to send transaction", t)
+            }
+        }
     }
 
     override fun isHardwareAccount(): Boolean {
         return evmKitWrapper.isHardwareSigner
     }
 
-    fun getUnsignedTransactionHex(): Single<String> {
-        val transaction = transaction ?: throw Exception()
-        if (transaction.errors.isNotEmpty()) throw Exception()
+    suspend fun getUnsignedTransactionHex(): String {
+        val success = settingsService.stateFlow
+            .filter { it is DataState.Success<*> }
+            .map { it as DataState.Success<SendEvmSettingsService.Transaction> }
+            .first { it.data.errors.isEmpty() }
 
-        val transactionData = transaction.transactionData
-        val gasPrice = transaction.gasData.gasPrice
-        val gasLimit = transaction.gasData.gasLimit
-        val nonce = transaction.nonce
+        val tx = success.data
+        val gasPrice = requireNotNull(tx.gasData.gasPrice) { "gasPrice == null" }
+        val gasLimit = requireNotNull(tx.gasData.gasLimit) { "gasLimit == null" }
+        val nonce    = requireNotNull(tx.nonce)            { "nonce == null" }
 
-        return evmKitWrapper.getUnsignedTransactionHex(transactionData, gasPrice, gasLimit, nonce)
+        val hex = evmKitWrapper.getUnsignedTransactionHex(
+            tx.transactionData, gasPrice, gasLimit, nonce
+        ).await()
+
+        return if (hex.startsWith("0x") || hex.startsWith("0X")) hex else "0x$hex"
     }
 
     var syncPaused = false
