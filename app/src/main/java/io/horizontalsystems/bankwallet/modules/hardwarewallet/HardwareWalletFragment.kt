@@ -65,7 +65,6 @@ class HardwareWalletFragment : BaseComposeFragment() {
 @Composable
 fun HardwareWalletScreen(navController: NavController, popUpToInclusiveId: Int, inclusive: Boolean) {
     val view = LocalView.current
-    val input = navController.getInput<ManageAccountsModule.Input>()
 
     val viewModel = viewModel<HardwareWalletViewModel>(factory = HardwareWalletModule.Factory())
     val uiState = viewModel.uiState
@@ -101,12 +100,6 @@ fun HardwareWalletScreen(navController: NavController, popUpToInclusiveId: Int, 
                 accountType = accountType,
                 accountName = accountName
             )
-//            bundleOf(
-//                SelectHardwareBlockchainsModule.accountTypeKey to accountType,
-//                SelectHardwareBlockchainsModule.accountNameKey to accountName,
-//                "bibibububaba" to popUpToInclusiveId,
-//                "bibibububaba2" to inclusive,
-//            )
         )
     }
 
@@ -124,6 +117,7 @@ fun HardwareWalletScreen(navController: NavController, popUpToInclusiveId: Int, 
                                 MenuItem(
                                     title = TranslatableString.ResString(R.string.Button_Done),
                                     onClick = viewModel::onClickDone,
+                                    tint = ComposeAppTheme.colors.jacob,
                                     enabled = submitType.enabled
                                 )
                             )
@@ -133,6 +127,7 @@ fun HardwareWalletScreen(navController: NavController, popUpToInclusiveId: Int, 
                                 MenuItem(
                                     title = TranslatableString.ResString(R.string.Button_Next),
                                     onClick = viewModel::onClickNext,
+                                    tint = ComposeAppTheme.colors.jacob,
                                     enabled = submitType.enabled
                                 )
                             )
@@ -188,7 +183,6 @@ fun HardwareWalletScreen(navController: NavController, popUpToInclusiveId: Int, 
                             onValueChange = viewModel::onEnterAddress
                         )
                     }
-                    /*
                     HardwareWalletViewModel.Type.SolanaAddressHardware -> {
                         HSAddressInput(
                             modifier = Modifier.padding(horizontal = 16.dp),
@@ -198,6 +192,7 @@ fun HardwareWalletScreen(navController: NavController, popUpToInclusiveId: Int, 
                             onValueChange = viewModel::onEnterAddress
                         )
                     }
+                    /*
                     HardwareWalletViewModel.Type.TronAddressHardware -> {
                         HSAddressInput(
                             modifier = Modifier.padding(horizontal = 16.dp),
@@ -231,7 +226,7 @@ fun HardwareWalletScreen(navController: NavController, popUpToInclusiveId: Int, 
 
 object HardwareWalletAddressTextPreprocessor : TextPreprocessor {
     override fun process(text: String): String {
-        return text.removePrefix("ethereum:")
+        return text.removePrefix("ethereum:").removePrefix("solana:")
     }
 }
 
