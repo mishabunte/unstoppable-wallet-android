@@ -43,10 +43,15 @@ class SelectHardwareBlockchainsViewModel(
             is AccountType.HdExtendedKey,
             is AccountType.EvmAddress,
             is AccountType.SolanaAddress,
-            is AccountType.SolanaAddressHardware,
             is AccountType.TronAddress,
             is AccountType.TronAddressHardware -> Unit // N/A
             is AccountType.EvmAddressHardware -> {
+                title = R.string.Watch_Select_Blockchains
+                coinViewItems = service.tokens(accountType).map {
+                    coinViewItemForBlockchain(it)
+                }
+            }
+            is AccountType.SolanaAddressHardware -> {
                 title = R.string.Watch_Select_Blockchains
                 coinViewItems = service.tokens(accountType).map {
                     coinViewItemForBlockchain(it)
