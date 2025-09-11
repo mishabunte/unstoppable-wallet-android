@@ -1286,6 +1286,8 @@
     <string name="ManageAccounts_ImportWallet">Import Wallet</string>
     <string name="ManageAccounts_WatchAddress">Watch Address</string>
     <string name="ManageAccounts_LinkHardwareWallet">Link Hardware Wallet</string>
+    <string name="ManageAccounts_HardwareWalletAuthentication">Hardware Wallet Authentication</string>
+    <string name="ManageAccounts_HardwareWalletFirmwareUpgrade">Hardware Wallet Firmware Upgrade</string>
 
     <!-- Import Wallet -->
     <string name="ImportWallet_BackupFile">from File</string>
@@ -1300,6 +1302,30 @@
 
     <!-- Link Hardware Wallet -->
     <string name="Hardware_LinkBy">Link By</string>
+    <string name="Hardware_LinkBy_TypeEvmAddress" translatable="false">EVM Address</string>
+    <string name="Hardware_LinkBy_TypeSolanaAddress" translatable="false">Solana Address</string>
+    <string name="Hardware_LinkBy_TypeTronAddress" translatable="false">Tron Address</string>
+    <string name="Hardware_LinkBy_TypeXPubKey" translatable="false">Account xPubKey</string>
+    <string name="Hardware_LinkBy_TypeEvmAddress_Subtitle" translatable="false">(Ethereum, Binance, …)</string>
+    <string name="Hardware_LinkBy_TypeSolanaAddress_Subtitle" translatable="false">(SOL, Solana tokens, …)</string>
+    <string name="Hardware_LinkBy_TypeTronAddress_Subtitle" translatable="false">(TRX, Tron tokens, …)</string>
+    <string name="Hardware_LinkBy_TypeXPubKey_Subtitle" translatable="false">(Bitcoin, Litecoin, …)</string>
+
+    <!-- Hardware Wallet EVM send -->
+    <string name="HardwareWallet_TransactionError">Error creating transaction</string>
+
+    <!--Hardware Wallet Firmware Upgrade-->
+    <string name="HardwareWalletFirmwareUpgrade_Title">Firmware Upgrade</string>
+
+    <!--Hardware Wallet Authentication-->
+    <string name="HardwareWalletAuthentication_Title">Wallet Authentication</string>
+    <string name="HardwareWallet_SendPairingRequest">Send pairing request</string>
+    <string name="HardwareWalletAuthentication_TagError">Failed to write tag. Please, try again</string>
+    <string name="HardwareWalletAuthentication_NetworkError">Network error. Please check your Internet connection</string>
+    <string name="HardwareWalletAuthentication_TagSuccess">Tag writing success!</string>
+    <string name="HardwareWalletAuthentication_StartWalletAuthentication">Start Wallet Authentication</string>
+    <string name="HardwareWalletAuthentication_ReadyToScan">Ready to Scan</string>
+    <string name="HardwareWalletAuthentication_ScanQRCode">Scan QR Code</string>
 
     <!-- Import Backup File -->
     <string name="ImportBackupFile_EnterPassword">Enter Password</string>
