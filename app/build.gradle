@@ -183,6 +183,8 @@ android {
     packagingOptions {
         resources {
             pickFirsts += ['META-INF/atomicfu.kotlin_module']
+            pickFirsts += ['**/CertPathReviewerMessages_de.properties']
+            pickFirsts += ['**/CertPathReviewerMessages.properties']
             excludes += ['META-INF/INDEX.LIST', 'META-INF/DEPENDENCIES', 'META-INF/LICENSE.md', 'META-INF/NOTICE.md']
         }
         jniLibs {
@@ -201,27 +203,77 @@ android {
     lint {
         disable 'LogNotTimber'
     }
+//    configurations.all {
+//        resolutionStrategy {
+//            // Force resolution to newer version, overriding strict constraints
+//            force 'org.bouncycastle:bcprov-jdk15on:1.70'
+//            force 'org.bouncycastle:bcpkix-jdk15on:1.70'
+//            force 'org.bouncycastle:bcutil-jdk15on:1.70'
+//
+//            // Replace any old BouncyCastle with new ones
+//            dependencySubstitution {
+//                substitute module('org.bouncycastle:bcprov-jdk15to18') using module('org.bouncycastle:bcprov-jdk15on:1.70')
+//                substitute module('org.bouncycastle:bcprov-ext-jdk15to18') using module('org.bouncycastle:bcprov-ext-jdk15on:1.70')
+//                substitute module('org.bouncycastle:bcpkix-jdk15to18') using module('org.bouncycastle:bcpkix-jdk15on:1.70')
+//            }
+//        }
+//
+//        // Exclude the problematic old versions entirely
+//        exclude group: 'org.bouncycastle', module: 'bcprov-jdk15to18'
+//        exclude group: 'org.bouncycastle', module: 'bcprov-ext-jdk15to18'
+//        exclude group: 'org.bouncycastle', module: 'bcpkix-jdk15to18'
+//    }
 
-    configurations.all { c ->
-        c.resolutionStrategy.dependencySubstitution {
-            substitute module('org.bouncycastle:bcprov-jdk15to18:1.68') using module('org.bouncycastle:bcprov-jdk15on:1.65')
-            substitute module('com.google.protobuf:protobuf-java:3.6.1') using module('com.google.protobuf:protobuf-javalite:3.21.1')
-            substitute module('net.jcip:jcip-annotations:1.0') using module('com.github.stephenc.jcip:jcip-annotations:1.0-1')
+}
 
-            substitute module('com.tinder.scarlet:scarlet:0.1.12') using module('com.github.WalletConnect.Scarlet:scarlet:1.0.0')
-            substitute module('com.tinder.scarlet:websocket-okhttp:0.1.12') using module('com.github.WalletConnect.Scarlet:websocket-okhttp:1.0.0')
-            substitute module('com.tinder.scarlet:stream-adapter-rxjava2:0.1.12') using module('com.github.WalletConnect.Scarlet:stream-adapter-rxjava2:1.0.0')
-            substitute module('com.tinder.scarlet:message-adapter-gson:0.1.12') using module('com.github.WalletConnect.Scarlet:message-adapter-gson:1.0.0')
-            substitute module('com.tinder.scarlet:lifecycle-android:0.1.12') using module('com.github.WalletConnect.Scarlet:lifecycle-android:1.0.0')
+configurations.all { c ->
+    c.resolutionStrategy.dependencySubstitution {
+        substitute module('com.google.protobuf:protobuf-java:3.6.1') using module('com.google.protobuf:protobuf-javalite:3.21.1')
+        substitute module('net.jcip:jcip-annotations:1.0') using module('com.github.stephenc.jcip:jcip-annotations:1.0-1')
+
+        substitute module('com.tinder.scarlet:scarlet:0.1.12') using module('com.github.WalletConnect.Scarlet:scarlet:1.0.0')
+        substitute module('com.tinder.scarlet:websocket-okhttp:0.1.12') using module('com.github.WalletConnect.Scarlet:websocket-okhttp:1.0.0')
+        substitute module('com.tinder.scarlet:stream-adapter-rxjava2:0.1.12') using module('com.github.WalletConnect.Scarlet:stream-adapter-rxjava2:1.0.0')
+        substitute module('com.tinder.scarlet:message-adapter-gson:0.1.12') using module('com.github.WalletConnect.Scarlet:message-adapter-gson:1.0.0')
+        substitute module('com.tinder.scarlet:lifecycle-android:0.1.12') using module('com.github.WalletConnect.Scarlet:lifecycle-android:1.0.0')
+
+        // BouncyCastle substitutions - force everything to jdk15on:1.70
+        substitute module('org.bouncycastle:bcprov-jdk15to18') using module('org.bouncycastle:bcprov-jdk15on:1.70')
+        substitute module('org.bouncycastle:bcprov-ext-jdk15to18') using module('org.bouncycastle:bcprov-ext-jdk15on:1.70')
+        substitute module('org.bouncycastle:bcpkix-jdk15to18') using module('org.bouncycastle:bcpkix-jdk15on:1.70')
+        substitute module('org.bouncycastle:bcprov-jdk18on') using module('org.bouncycastle:bcprov-jdk15on:1.70')
+        substitute module('org.bouncycastle:bcutil-jdk18on') using module('org.bouncycastle:bcutil-jdk15on:1.70')
+    }
+
+    resolutionStrategy.eachDependency { details ->
+        if (details.requested.group == 'com.squareup.okhttp3') {
+            details.useVersion "4.12.0"
         }
-
-        resolutionStrategy.eachDependency { details ->
-            if (details.requested.group == 'com.squareup.okhttp3') {
-                details.useVersion "4.12.0"
+        // Force all BouncyCastle to version 1.70
+        if (details.requested.group == 'org.bouncycastle') {
+            if (details.requested.name.contains('jdk15to18') || details.requested.name.contains('jdk18on')) {
+                def newName = details.requested.name.replace('jdk15to18', 'jdk15on').replace('jdk18on', 'jdk15on')
+                details.useTarget group: 'org.bouncycastle', name: newName, version: '1.70'
+            } else {
+                details.useVersion '1.70'
             }
         }
     }
 
+    resolutionStrategy {
+        force 'org.bouncycastle:bcprov-jdk15on:1.70'
+        force 'org.bouncycastle:bcpkix-jdk15on:1.70'
+        force 'org.bouncycastle:bcutil-jdk15on:1.70'
+        force 'org.bouncycastle:bcprov-ext-jdk15on:1.70'
+        cacheChangingModulesFor 0, 'seconds'
+    }
+
+    // Global exclusions
+    exclude group: 'org.bouncycastle', module: 'bcprov-jdk15to18'
+    exclude group: 'org.bouncycastle', module: 'bcprov-ext-jdk15to18'
+    exclude group: 'org.bouncycastle', module: 'bcpkix-jdk15to18'
+    exclude group: 'org.bouncycastle', module: 'bcprov-jdk18on'
+    exclude group: 'org.bouncycastle', module: 'bcutil-jdk18on'
 }
 
 configurations {
@@ -302,6 +354,10 @@ dependencies {
     implementation "com.google.accompanist:accompanist-navigation-animation:$accompanist_version"
 
     api 'com.journeyapps:zxing-android-embedded:4.3.0'
+    implementation 'org.bitcoinj:bitcoinj-core:0.16.2'
+
+    // Explicitly declare the versions you want
+    implementation 'org.bouncycastle:bcprov-jdk15on:1.70'
 
     // QR code generator
     implementation("io.github.alexzhirkevich:qrose:1.0.1")
@@ -319,10 +375,10 @@ dependencies {
     implementation 'com.github.horizontalsystems:stellar-kit-android:c27e3a5'
     implementation 'com.github.horizontalsystems:ton-kit-android:dcddd90'
     implementation 'com.github.horizontalsystems:bitcoin-kit-android:7826bf5'
-    implementation 'com.github.horizontalsystems:ethereum-kit-android:1.2.0'
+    implementation 'com.github.4acha4a:ethereum-kit-android:1381f82'
     implementation 'com.github.horizontalsystems:blockchain-fee-rate-kit-android:1d3bd49'
-    implementation 'com.github.horizontalsystems:market-kit-android:f1286c8'
-    implementation 'com.github.horizontalsystems:solana-kit-android:ce738d8'
+    implementation 'com.github.4acha4a:market-kit-android:c89513a'
+    implementation 'com.github.4acha4a:solana-kit-android:3560475'
     implementation 'com.github.horizontalsystems:tron-kit-android:bdd7602'
     // Zcash SDK
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
@@ -330,6 +386,15 @@ dependencies {
     implementation("io.github.binance:binance-connector-java:3.0.0rc2") {
         exclude group: "org.bouncycastle", module: "bcprov-jdk18on"
     }
+
+    implementation "androidx.compose.material:material-icons-extended"
+
+    // BLE communication
+    def nordic_ble = "2.9.0"
+    def nordic_common = "2.4.0"
+    implementation "no.nordicsemi.android:ble-ktx:$nordic_ble"
+    implementation "no.nordicsemi.android.common:permissions-ble:$nordic_common"
+    implementation 'no.nordicsemi.android.support.v18:scanner:1.6.0'
 
 
     // Exclude old version from wherever it's coming
@@ -428,6 +493,9 @@ dependencies {
 
 configurations.all {
     resolutionStrategy {
+        force 'org.bouncycastle:bcprov-jdk15on:1.70'
+        force 'org.bouncycastle:bcpkix-jdk15on:1.70'
+        force 'org.bouncycastle:bcprov-ext-jdk15on:1.70'
         cacheChangingModulesFor 0, 'seconds'
     }
 }
