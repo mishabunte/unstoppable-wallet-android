@@ -1,10 +1,12 @@
 package io.horizontalsystems.bankwallet.core.adapters
 
+import android.util.Log
 import io.horizontalsystems.bankwallet.core.AdapterState
 import io.horizontalsystems.bankwallet.core.App
 import io.horizontalsystems.bankwallet.core.BalanceData
 import io.horizontalsystems.bankwallet.core.ISendSolanaAdapter
 import io.horizontalsystems.bankwallet.core.managers.SolanaKitWrapper
+import io.horizontalsystems.core.toHexString
 import io.horizontalsystems.solanakit.SolanaKit
 import io.horizontalsystems.solanakit.models.Address
 import io.horizontalsystems.solanakit.models.FullTransaction
@@ -45,8 +47,8 @@ class SolanaAdapter(private val kitWrapper: SolanaKitWrapper) : BaseSolanaAdapte
         get() = solanaKit.balanceFlow.map {}.asFlowable()
 
     // ISendSolanaAdapter
-    override suspend fun getUnsignedTransaction(from: String, to: String, amount: BigDecimal): String {
-        return kitWrapper.createUnsignedTransactionHex(from, to, amount)
+    override suspend fun getUnsignedTransaction(from: String, to: String, mintAddress: String?, amount: Long, decimals: Int): String {
+        return kitWrapper.createUnsignedTransactionHex(from, to, amount=amount).toHexString()
     }
 
     override fun isHardwareAccount(): Boolean {

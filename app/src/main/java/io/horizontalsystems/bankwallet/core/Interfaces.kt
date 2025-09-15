@@ -401,7 +401,7 @@ interface IAdapter {
 interface ISendSolanaAdapter {
     val availableBalance: BigDecimal
     fun isHardwareAccount(): Boolean
-    suspend fun getUnsignedTransaction(from: String, to: String, amount: BigDecimal): String
+    suspend fun getUnsignedTransaction(from: String, to: String, mintAddress: String? = null, amount: Long, decimals: Int): String
     suspend fun send(amount: BigDecimal, to: SolanaAddress): FullTransaction
     suspend fun sendRawTransaction(txHex: String): String
 }

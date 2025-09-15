@@ -2,6 +2,7 @@ package io.horizontalsystems.bankwallet.core.managers
 
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import io.horizontalsystems.bankwallet.core.App
 import io.horizontalsystems.bankwallet.core.UnsupportedAccountException
 import io.horizontalsystems.bankwallet.core.hexToByteArray
@@ -16,6 +17,7 @@ import io.horizontalsystems.core.toHexString
 import io.horizontalsystems.solanakit.Signer
 import io.horizontalsystems.solanakit.SolanaKit
 import io.reactivex.Observable
+import io.reactivex.Single
 import io.reactivex.subjects.PublishSubject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +29,7 @@ import java.math.BigDecimal
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.io.encoding.Base64
+import kotlin.math.min
 
 class SolanaKitManager(
     private val appConfigProvider: AppConfigProvider,
@@ -174,63 +177,6 @@ class SolanaKitManager(
 class SolanaTxHandler(
     private val rpcSourceUrl: String
 ) {
-    suspend fun createUnsignedTxHex(
-        from: String,
-        to: String,
-        amount: BigDecimal
-    ): String = withContext(Dispatchers.IO) {
-        //Log.d("SolanaKitWrapper", "Creating unsigned transaction from: $from to: $to amount: $amount")
-
-        val fromPubkey = Base58.decode(from)
-        val toPubkey = Base58.decode(to)
-        //Log.d("SolanaKitWrapper", "Using RPC source: ${rpcSourceUrl}")
-        val recentBlockhash = HardwareWalletURLRequestHandler().getSolanaLatestBlockhash(rpcSourceUrl)
-            ?: throw IllegalStateException("Recent blockhash is not available")
-//        println(recentBlockhash.toHexString())
-//        val recentBlockhash = Base58.decode("11111111111111111111111111111111")
-        //val recentBlockhash = hexToBytes("3f14086b3320e6a98af7774ddb3c975d994114640901d11a29f18c35e05ba45b")
-
-
-        val lamports = amount.multiply(BigDecimal.TEN.pow(9)).toLong()
-
-        // === Transaction Header ===
-        val header = byteArrayOf(
-            1, // numRequiredSignatures
-            0, // numReadonlySignedAccounts
-            1  // numReadonlyUnsignedAccounts
-        )
-
-        val systemProgramId = Base58.decode("11111111111111111111111111111111")
-        val accountKeys = listOf(fromPubkey, toPubkey, systemProgramId)
-        val keyCount = byteArrayOf(accountKeys.size.toByte())
-        val keysSerialized = accountKeys.fold(ByteArray(0)) { acc, key -> acc + key }
-
-        val blockhashBytes = recentBlockhash
-
-        // === Instructions ===
-        val instruction = ByteBuffer.allocate(17)
-            .order(ByteOrder.LITTLE_ENDIAN)
-            .put(2) // program_id_index = 2
-            .put(2) // number of accounts
-            .put(0) // from account index
-            .put(1) // to account index
-            .put(12) // data length (fix if needed)
-            .put(2) // instruction: transfer
-            .put(0) // padding
-            .put(0) // padding
-            .put(0) // padding
-            .putLong(lamports) // amount
-            .array()
-
-        // === Message ===
-        val message = header + keyCount + keysSerialized + blockhashBytes + byteArrayOf(1) + instruction
-
-        // === Signatures ===
-        val signaturePlaceholder = ByteArray(64) { 0x00 }
-        val signedTx = byteArrayOf(0x01) + signaturePlaceholder + message
-
-        signedTx.toHexString()
-    }
     @kotlin.io.encoding.ExperimentalEncodingApi
     suspend fun sendRawTransaction(
         signedTxHex: String
@@ -249,14 +195,33 @@ class SolanaKitWrapper(
     suspend fun createUnsignedTransactionHex(
         from: String,
         to: String,
-        amount: BigDecimal
-    ): String {
-        val res = SolanaTxHandler(
-            rpcSourceUrl = rpcSourceUrl
-        ).createUnsignedTxHex(from, to, amount)
-        //Log.d("SolanaKitWrapper", "Created unsigned transaction hex: $res")
-        return res
+        mintAddress: String? = null,
+        decimals: Int = 9,
+        amount: Long
+    ): ByteArray = withContext(Dispatchers.IO) {
+        val recentBlockhash = HardwareWalletURLRequestHandler()
+            .getSolanaLatestBlockhash(rpcSourceUrl)
+            ?: throw IllegalStateException("Recent blockhash is not available")
+        if (mintAddress != null) {
+            Log.d("SolanaKit", "Creating SPL unsigned transaction from: $from, to: $to, mintAddress: $mintAddress, amount: $amount, recentBlockhash: $recentBlockhash")
+            solanaKit.getSplTransactionHex(
+                mintAddress = mintAddress,
+                fromPublicKey = from,
+                destinationAddress = to,
+                amount = amount,
+                decimals = decimals,
+                recentBlockHash = recentBlockhash
+            ).blockingGet()
+        } else {
+            solanaKit.getSolTransactionHex(
+                from = from,
+                destination = to,
+                amount = amount,
+                recentBlockHash = recentBlockhash
+            ).blockingGet()
+        }
     }
+
     @kotlin.io.encoding.ExperimentalEncodingApi
     suspend fun sendRawTransaction(
         signedTxHex: String

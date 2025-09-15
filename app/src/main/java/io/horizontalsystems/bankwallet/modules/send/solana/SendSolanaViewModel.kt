@@ -1,5 +1,6 @@
 package io.horizontalsystems.bankwallet.modules.send.solana
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -35,6 +36,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 import java.net.UnknownHostException
+import kotlin.math.min
 
 class SendSolanaViewModel(
     val wallet: Wallet,
@@ -123,16 +125,19 @@ class SendSolanaViewModel(
             address = address,
             contact = contact,
             coin = wallet.coin,
+            token = wallet.token,
             feeCoin = feeToken.coin,
             memo = null
         )
     }
 
-    fun getUnsignedTransaction(to: String, amount: BigDecimal) {
+    fun getUnsignedTransaction(amount: Long) {
         val from = wallet.account.type.solanaAddress() ?: throw IllegalStateException("Solana address is not set")
         val to = addressState.solanaAddress.toString()
+        val mintAddress = (wallet.token.type as? TokenType.Spl)?.address
+        val decimals = min(9, wallet.token.decimals) // SPL token can have max 9 decimals
         viewModelScope.launch {
-            val hex = adapter.getUnsignedTransaction(from, to, amount)
+            val hex = adapter.getUnsignedTransaction(from=from, to=to, mintAddress=mintAddress, amount=amount, decimals=decimals)
             _unsignedTxHex.value = hex
         }
     }

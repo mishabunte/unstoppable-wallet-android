@@ -4,6 +4,7 @@ import io.horizontalsystems.bankwallet.entities.Address
 import io.horizontalsystems.bankwallet.modules.contacts.model.Contact
 import io.horizontalsystems.hodler.LockTimeInterval
 import io.horizontalsystems.marketkit.models.Coin
+import io.horizontalsystems.marketkit.models.Token
 import java.math.BigDecimal
 
 data class SendConfirmationData(
@@ -15,5 +16,6 @@ data class SendConfirmationData(
     val feeCoin: Coin,
     val lockTimeInterval: LockTimeInterval? = null,
     val memo: String?,
+    val token: Token? = null,
     val rbfEnabled: Boolean? = null
 )
