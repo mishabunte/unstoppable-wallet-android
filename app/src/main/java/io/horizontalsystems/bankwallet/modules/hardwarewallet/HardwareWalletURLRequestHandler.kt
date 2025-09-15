@@ -59,7 +59,7 @@ class HardwareWalletURLRequestHandler {
         }
     }
 
-    fun getSolanaLatestBlockhash(endpoint: String? = null): ByteArray? {
+    fun getSolanaLatestBlockhash(endpoint: String? = null): String? {
         try {
             val url = URL(endpoint)
             val connection = url.openConnection() as HttpURLConnection
@@ -82,7 +82,7 @@ class HardwareWalletURLRequestHandler {
             if (connection.responseCode == HttpURLConnection.HTTP_OK) {
                 val response = connection.inputStream.bufferedReader().use { it.readText() }
                 val json = JSONObject(response)
-                return Base58.decode(json.getJSONObject("result").getJSONObject("value").getString("blockhash"))
+                return json.getJSONObject("result").getJSONObject("value").getString("blockhash")
             } else {
                 Log.e("HitoAuth", "Failed to get latest blockhash: ${connection.responseMessage}")
                 return null
