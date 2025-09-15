@@ -37,7 +37,6 @@ import io.horizontalsystems.bankwallet.modules.confirm.ConfirmTransactionScreen
 import io.horizontalsystems.bankwallet.modules.hardwarewallet.AnimatedNFCBox
 import io.horizontalsystems.bankwallet.modules.hardwarewallet.HardwareWalletNFCHandler
 import io.horizontalsystems.bankwallet.modules.hardwarewallet.HardwareWalletScanButtons
-import io.horizontalsystems.bankwallet.modules.hardwarewallet.HardwareWalletSignScanFragment
 import io.horizontalsystems.bankwallet.modules.hardwarewallet.HardwareWalletSignViewModel
 import io.horizontalsystems.bankwallet.modules.hardwarewallet.LoadingScreen
 import io.horizontalsystems.bankwallet.modules.hardwarewallet.NFCCallback
@@ -124,7 +123,7 @@ private fun SendEvmConfirmationScreen(
     val view = LocalView.current
     val context = LocalContext.current
 
-    val vm: HardwareWalletSignViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+    val vm: HardwareWalletSignViewModel = viewModel(
         factory = HardwareWalletSignViewModel.Factory(viewModel.sendTransactionService)
     )
 
@@ -138,15 +137,21 @@ private fun SendEvmConfirmationScreen(
     var messageHex by remember { mutableStateOf<String?>(null) }
 
     var nfcWritingStarted by remember { mutableStateOf(false) }
-    val nfcHandler = HardwareWalletNFCHandler(context, onSuccess = {
-        scanToTransmit = true
-        nfcWritingStarted = false
-    }, onError = {        HudHelper.showErrorMessage(
-        contenView = view,
-        resId = R.string.HardwareWalletAuthentication_TagError,
-        icon = R.drawable.icon_24_warning_2,
-        iconTint = R.color.white
-    )})
+    val nfcHandler = HardwareWalletNFCHandler(
+        context,
+        onSuccess = {
+            scanToTransmit = true
+            nfcWritingStarted = false
+        },
+        onError = {
+            HudHelper.showErrorMessage(
+                contenView = view,
+                resId = R.string.HardwareWalletAuthentication_TagError,
+                icon = R.drawable.icon_24_warning_2,
+                iconTint = R.color.white
+            )
+        }
+    )
 
     val coroutineScope = rememberCoroutineScope()
 
@@ -287,11 +292,14 @@ private fun SendEvmConfirmationScreen(
                             type = NFCCallbackType.ETH_SEND,
                             messageText = messageText
                         )
-                        StartNFCWriting(nfcHandler, nfcCallback)
-
-                        AnimatedNFCBox(
-                            onCancelClick = { nfcWritingStarted = false },
-                            text = "Confirm by tapping Hito Wallet"
+                        StartNFCWriting(
+                            nfcHandler,
+                            nfcCallback,
+                            onCancelClick =
+                                { nfcWritingStarted = false }
+                            ,
+                            text =
+                                "Confirm by tapping Hito Wallet"
                         )
                     } else {
                         ButtonPrimaryYellow(
@@ -305,8 +313,6 @@ private fun SendEvmConfirmationScreen(
                     }
                 } else {
                     HardwareWalletScanButtons(
-                        modifier = Modifier
-                            .fillMaxWidth(),
                         onTryAgainClick = { scanToTransmit = false },
                         onContinueClick = {
                             val intent = QRScannerActivity.getScanQrIntent(context, showPasteButton = false)

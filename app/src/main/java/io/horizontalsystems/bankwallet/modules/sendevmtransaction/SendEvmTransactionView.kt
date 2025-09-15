@@ -26,16 +26,11 @@ import io.horizontalsystems.bankwallet.core.stats.StatEvent
 import io.horizontalsystems.bankwallet.core.stats.StatPage
 import io.horizontalsystems.bankwallet.core.stats.stat
 import io.horizontalsystems.bankwallet.modules.evmfee.Cautions
-import io.horizontalsystems.bankwallet.modules.evmfee.eip1559.Eip1559FeeSettingsViewModel
 import io.horizontalsystems.bankwallet.modules.hardwarewallet.HardwareWalletSendCautions
-import io.horizontalsystems.bankwallet.modules.hardwarewallet.HardwareWalletSignFragment
-import io.horizontalsystems.bankwallet.modules.hardwarewallet.HardwareWalletSignScanFragment
 import io.horizontalsystems.bankwallet.modules.multiswap.ui.DataField
 import io.horizontalsystems.bankwallet.modules.multiswap.ui.DataFieldFee
 import io.horizontalsystems.bankwallet.modules.send.SendModule
-import io.horizontalsystems.bankwallet.modules.send.evm.confirmation.SendEvmConfirmationViewModel
 import io.horizontalsystems.bankwallet.modules.send.evm.settings.SendEvmNonceViewModel
-import io.horizontalsystems.bankwallet.modules.send.evm.settings.SendEvmSettingsViewModel
 import io.horizontalsystems.bankwallet.ui.compose.ComposeAppTheme
 import io.horizontalsystems.bankwallet.ui.compose.components.ButtonSecondaryDefault
 import io.horizontalsystems.bankwallet.ui.compose.components.CellUniversalLawrenceSection

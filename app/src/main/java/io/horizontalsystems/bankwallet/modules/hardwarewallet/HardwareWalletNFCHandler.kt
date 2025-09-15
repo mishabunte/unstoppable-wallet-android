@@ -206,7 +206,10 @@ fun AnimatedNFCBoxYellow(onCancelClick: () -> Unit, text: String = "Tap to scan 
 }
 
 @Composable
-fun StartNFCWriting(nfcHandler: HardwareWalletNFCHandler, nfcCallback: NFCCallback) {
+fun StartNFCWriting(nfcHandler: HardwareWalletNFCHandler,
+                    nfcCallback: NFCCallback,
+                    onCancelClick: () -> Unit,
+                    text: String) {
     val context = nfcHandler.context
     val activity = nfcHandler.activity
     DisposableEffect(context) {
@@ -231,6 +234,7 @@ fun StartNFCWriting(nfcHandler: HardwareWalletNFCHandler, nfcCallback: NFCCallba
             activity.lifecycle.removeObserver(observer)
         }
     }
+    AnimatedNFCBox(onCancelClick, text)
 }
 
 

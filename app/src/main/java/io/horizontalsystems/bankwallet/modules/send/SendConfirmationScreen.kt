@@ -296,10 +296,13 @@ fun SendConfirmationScreen(
                     if (nfcWritingStarted) {
                         val messageText = "solana.sign:0x${unsignedTxHex}"
                         val nfcCallback = NFCCallback(type= NFCCallbackType.SOLANA_SEND, messageText=messageText)
-                        StartNFCWriting(nfcHandler, nfcCallback)
-                        AnimatedNFCBox(onCancelClick = {
-                            nfcWritingStarted = false
-                        }, text = "Confirm by tapping Hito Wallet")
+                        StartNFCWriting(nfcHandler,
+                            nfcCallback,
+                            onCancelClick = {
+                                nfcWritingStarted = false
+                            },
+                            text = "Confirm by tapping Hito Wallet"
+                        )
                     } else {
                         if (scanToTransmit) {
                             SectionUniversalLawrence {
@@ -333,16 +336,20 @@ fun SendConfirmationScreen(
                     )
                 }
                 if (scanToTransmit) {
-                    HardwareWalletScanButtons(Modifier
+                    Box(Modifier
                         .fillMaxWidth()
                         .align(Alignment.BottomCenter)
                         .padding(start = 16.dp, end = 16.dp, bottom = 48.dp),
-                        onTryAgainClick = {
-                            scanToTransmit = false
-                        }, onContinueClick = {
-                            val intent = QRScannerActivity.getScanQrIntent(context, showPasteButton = false)
-                            launcher.launch(intent)
-                        })
+                        contentAlignment = Alignment.Center) {
+                        HardwareWalletScanButtons(
+                            onTryAgainClick = {
+                                scanToTransmit = false
+                            }, onContinueClick = {
+                                val intent = QRScannerActivity.getScanQrIntent(context, showPasteButton = false)
+                                launcher.launch(intent)
+                            }
+                        )
+                    }
                 }
             } else {
                 SendButton(

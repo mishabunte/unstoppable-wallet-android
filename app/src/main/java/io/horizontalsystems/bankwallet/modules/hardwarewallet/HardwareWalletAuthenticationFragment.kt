@@ -155,11 +155,10 @@ private fun HardwareWalletAuthenticationStartScreen(
                         }
                     )
                 } else {
-                    var nfcCallback = NFCCallback(type=NFCCallbackType.AUTHENTICATION)
-                    StartNFCWriting(nfcHandler, nfcCallback)
-                    AnimatedNFCBox(onCancelClick = {
+                    val nfcCallback = NFCCallback(type=NFCCallbackType.AUTHENTICATION)
+                    StartNFCWriting(nfcHandler, nfcCallback, onCancelClick = {
                         nfcWritingStarted = false
-                    })
+                    }, text = "Tap to scan the authentication token")
                 }
             }
         }
