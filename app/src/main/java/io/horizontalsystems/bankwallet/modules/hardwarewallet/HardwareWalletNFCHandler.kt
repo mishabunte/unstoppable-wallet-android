@@ -293,15 +293,12 @@ class HardwareWalletNFCHandler(
     private fun handleHitoSolSendIntent(nfcCallback: NFCCallback) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                Log.d("HitoAuth", "Generated message for Solana: ${nfcCallback.messageText}")
-
-                // Switch to main thread to call handleIntent safely
                 withContext(Dispatchers.Main) {
                     handleIntent(nfcCallback)
                 }
 
             } catch (e: Exception) {
-                onNetworkError(e)
+                onError(e)
             }
         }
     }
@@ -309,7 +306,7 @@ class HardwareWalletNFCHandler(
     private fun handleHitoAuthIntent(nfcCallback: NFCCallback) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                nfcCallback.messageText = HardwareWalletURLRequestHandler().createAuthPayload()
+                //nfcCallback.messageText = HardwareWalletURLRequestHandler().createAuthPayload()
 
                 Log.d("HitoAuth", "Generated message: ${nfcCallback.messageText}")
 
