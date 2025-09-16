@@ -61,12 +61,12 @@ fun LazyListScope.firmwareUpgradeCheckList(
             Text(
                 text = "${index + 1}.", // numeration
                 modifier = Modifier.padding(end = 8.dp),
-                style = ComposeAppTheme.typography.headline2,
+                style = ComposeAppTheme.typography.body,
                 color = ComposeAppTheme.colors.leah
             )
             Text(
                 text = item,
-                style = ComposeAppTheme.typography.headline2,
+                style = ComposeAppTheme.typography.body,
                 color = ComposeAppTheme.colors.leah
             )
         }
@@ -82,12 +82,13 @@ private fun HardwareWalletFirmwareUpgradeInitialScreen(navController: NavControl
             navigationIcon = {
                 HsBackButton(onClick = { navController?.popBackStack() })
             },
-
         )
         Box(modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center) {
-            Column(Modifier.padding(horizontal=32.dp)) {
-                Spacer(Modifier.height(32.dp))
+            contentAlignment = Alignment.TopCenter) {
+            Column(Modifier
+                .padding(horizontal=32.dp, vertical=16.dp)
+                .align(Alignment.TopCenter)
+            ) {
                 Text(
                     text = "Prepare your Hito Wallet for the firmware upgrade",
                     style = ComposeAppTheme.typography.title3,
@@ -95,8 +96,7 @@ private fun HardwareWalletFirmwareUpgradeInitialScreen(navController: NavControl
                     fontSize = 24.sp,
                     textAlign = TextAlign.Center,
                 )
-                Spacer(Modifier.height(32.dp))
-                LazyColumn(Modifier.fillMaxSize().padding(bottom = 144.dp)) {
+                LazyColumn(Modifier.fillMaxSize().padding(vertical = 32.dp)) {
                     firmwareUpgradeCheckList(
                         listOf(
                             "Turn on Bluetooth on your phone and allow the app to use it",
