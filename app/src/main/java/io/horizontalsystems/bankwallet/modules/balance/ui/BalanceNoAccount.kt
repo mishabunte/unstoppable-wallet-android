@@ -114,7 +114,7 @@ fun BalanceNoAccount(navController: NavController) {
                 .padding(horizontal = 48.dp),
             title = stringResource(R.string.ManageAccounts_HardwareWalletAuthentication),
             onClick = {
-                navController.slideFromRight(R.id.hardwareWalletAuthenticationFragment)
+                navController.slideFromRight(R.id.hardwareWalletAuthenticationInitialFragment)
             }
         )
 

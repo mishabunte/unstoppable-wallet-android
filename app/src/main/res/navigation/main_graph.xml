@@ -5,8 +5,14 @@
     app:startDestination="@id/mainFragment">
 
     <fragment
-        android:id="@+id/hardwareWalletAuthenticationFragment"
-        android:name="io.horizontalsystems.bankwallet.modules.hardwarewallet.HardwareWalletAuthenticationFragment" />
+        android:id="@+id/hardwareWalletAuthenticationInitialFragment"
+        android:name="io.horizontalsystems.bankwallet.modules.hardwarewallet.authentication.HardwareWalletAuthenticationInitialFragment" />
+    <fragment
+        android:id="@+id/hardwareWalletAuthenticationScanFragment"
+        android:name="io.horizontalsystems.bankwallet.modules.hardwarewallet.authentication.HardwareWalletAuthenticationScanFragment" />
+    <fragment
+        android:id="@+id/hardwareWalletAuthenticationNetworkErrorFragment"
+        android:name="io.horizontalsystems.bankwallet.modules.hardwarewallet.authentication.HardwareWalletAuthenticationNetworkErrorFragment" />
     <fragment
         android:id="@+id/hardwareWalletFirmwareUpgradeInitialFragment"
         android:name="io.horizontalsystems.bankwallet.modules.hardwarewallet.firmwareupgrade.ui.HardwareWalletFirmwareUpgradeInitialFragment" />

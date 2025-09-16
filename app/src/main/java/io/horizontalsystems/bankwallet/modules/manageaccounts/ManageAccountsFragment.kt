@@ -126,7 +126,7 @@ fun ManageAccountsScreen(navController: NavController, mode: ManageAccountsModul
                         )
                     },
                     ActionViewItem(R.drawable.icon_font_awesome_5_solid_shield_alt_20, R.string.ManageAccounts_HardwareWalletAuthentication) {
-                        navController.slideFromRight(R.id.hardwareWalletAuthenticationFragment, args)
+                        navController.slideFromRight(R.id.hardwareWalletAuthenticationInitialFragment, args)
                     },
                     ActionViewItem(R.drawable.ic_download_20, R.string.ManageAccounts_HardwareWalletFirmwareUpgrade) {
                         navController.slideFromRight(R.id.hardwareWalletFirmwareUpgradeInitialFragment, args)
