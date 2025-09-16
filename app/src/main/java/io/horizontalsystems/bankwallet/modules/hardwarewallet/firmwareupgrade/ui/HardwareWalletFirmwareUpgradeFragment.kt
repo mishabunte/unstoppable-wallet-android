@@ -436,11 +436,10 @@ fun HardwareWalletFirmwareUpgradeScreen(
     val upgradeState by viewModel.upgradeState.collectAsStateWithLifecycle()
     val firmwareDownloadState by viewModel.firmwareDownloadState.collectAsStateWithLifecycle()
     val installationProgress by viewModel.installationProgress.collectAsStateWithLifecycle()
-    Log.d("hito-ble", "HitoBleManager state changed: ${hitoBleManager}")
     val deviceVersionInfo by viewModel.deviceVersionInfo.collectAsState()
     val deviceName by viewModel.deviceName.collectAsState()
     val downloadedFirmwareVersion by viewModel.downloadedFirmwareVersion.collectAsState()
-    val installationFinished by viewModel.installationFinished.collectAsState()
+    
     ComposeAppTheme {
         Column(Modifier.fillMaxSize().background(ComposeAppTheme.colors.tyler)) {
             AppBar(
