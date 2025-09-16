@@ -89,7 +89,7 @@ fun HardwareWalletAuthenticationSuccessScreen(
                     modifier = Modifier.size(112.dp),
                     painter = painterResource(R.drawable.icon_check_1_24),
                     contentDescription = null,
-                    tint = ComposeAppTheme.colors.green50,
+                    tint = ComposeAppTheme.colors.remus,
                 )
             }
             Spacer(Modifier.height(32.dp))
