@@ -133,28 +133,31 @@ private fun FirmwareUpgradeData(
         ) {
             when (upgradeState) {
                 is UpgradeState.NotVerified -> {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_attention_24),
-                        contentDescription = null,
-                        tint = ComposeAppTheme.colors.yellowD,
-                        modifier = Modifier.size(48.dp)
-                    )
                     Text(
                         text = "Caution!",
                         color = ComposeAppTheme.colors.leah,
-                        style = ComposeAppTheme.typography.headline1,
+                        style = ComposeAppTheme.typography.title1,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(top = 16.dp, bottom = 16.dp)
                     )
+                    Row {
+                        Icon(
+                            painter = painterResource(R.drawable.icon_hardware_wallet_24),
+                            contentDescription = null,
+                            tint = ComposeAppTheme.colors.leah,
+                            modifier = Modifier.size(64.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Icon(
+                            painter = painterResource(R.drawable.ic_attention_24),
+                            contentDescription = null,
+                            tint = ComposeAppTheme.colors.jacob,
+                            modifier = Modifier.size(64.dp)
+                        )
+                    }
+                    Spacer(Modifier.height(16.dp))
                     Text(
                         text = "Firmware upgrade is not verified or couldn't be downloaded.",
-                        color = ComposeAppTheme.colors.leah,
-                        style = ComposeAppTheme.typography.body,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-                    Text(
-                        text = "Please contact us for further information.",
                         color = ComposeAppTheme.colors.leah,
                         style = ComposeAppTheme.typography.body,
                         textAlign = TextAlign.Center,
@@ -206,13 +209,13 @@ private fun FirmwareUpgradeData(
                     Spacer(Modifier.height(8.dp))
                     when (firmwareDownloadState) {
                         is FirmwareDownloadState.Loading -> {
+                            Spacer(Modifier.height(16.dp))
                             CircularProgressIndicator(
                                 modifier = Modifier
-                                    .size(48.dp)
-                                    .padding(top = 16.dp),
+                                    .size(64.dp),
                                 color = ComposeAppTheme.colors.grey
                             )
-                            Spacer(Modifier.height(24.dp))
+                            Spacer(Modifier.height(16.dp))
                             Text(
                                 text = "Downloading the firmware...",
                                 color = ComposeAppTheme.colors.grey,
@@ -221,18 +224,27 @@ private fun FirmwareUpgradeData(
                             )
                         }
                         is FirmwareDownloadState.NewestVersion -> {
-                            Spacer(Modifier.height(8.dp))
-                            Icon(
-                                painter = painterResource(R.drawable.ic_check),
-                                contentDescription = null,
-                                tint = ComposeAppTheme.colors.green50,
-                                modifier = Modifier.size(48.dp)
-                            )
-                            Spacer(Modifier.height(8.dp))
+                            Spacer(Modifier.height(16.dp))
+                            Row {
+                                Icon(
+                                    painter = painterResource(R.drawable.icon_hardware_wallet_24),
+                                    contentDescription = null,
+                                    tint = ComposeAppTheme.colors.leah,
+                                    modifier = Modifier.size(64.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_check),
+                                    contentDescription = null,
+                                    tint = ComposeAppTheme.colors.remus,
+                                    modifier = Modifier.size(64.dp)
+                                )
+                            }
+                            Spacer(Modifier.height(16.dp))
                             Text(
                                 text = "Your device is up to date",
                                 color = ComposeAppTheme.colors.leah,
-                                style = ComposeAppTheme.typography.headline2,
+                                style = ComposeAppTheme.typography.headline1,
                                 textAlign = TextAlign.Center,
                             )
                             Spacer(Modifier.height(24.dp))
@@ -264,12 +276,24 @@ private fun FirmwareUpgradeData(
                         }
                         is FirmwareDownloadState.Error -> {
                             Spacer(Modifier.height(16.dp))
-                            Icon(
-                                painter = painterResource(R.drawable.ic_attention_24),
-                                contentDescription = null,
-                                tint = ComposeAppTheme.colors.lucian,
-                                modifier = Modifier.size(48.dp)
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.icon_hardware_wallet_24),
+                                    contentDescription = null,
+                                    tint = ComposeAppTheme.colors.leah,
+                                    modifier = Modifier.size(48.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_close),
+                                    contentDescription = null,
+                                    tint = ComposeAppTheme.colors.lucian,
+                                    modifier = Modifier.size(48.dp)
+                                )
+                            }
                             Spacer(Modifier.height(16.dp))
                             Text(
                                 text = "An error occurred during the firmware download:",
@@ -297,8 +321,9 @@ private fun FirmwareUpgradeData(
                 is UpgradeState.Loading -> {
                     CircularProgressIndicator(
                         color = ComposeAppTheme.colors.grey,
-                        modifier = Modifier.padding(vertical = 16.dp)
+                        modifier = Modifier.size(112.dp)
                     )
+                    Spacer(Modifier.height(32.dp))
                     Text(
                         text = "Connecting to the device...",
                         color = ComposeAppTheme.colors.grey,
@@ -307,12 +332,24 @@ private fun FirmwareUpgradeData(
                     )
                 }
                 is UpgradeState.Error -> {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_attention_24),
-                        contentDescription = null,
-                        tint = ComposeAppTheme.colors.lucian,
-                        modifier = Modifier.size(48.dp)
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.icon_hardware_wallet_24),
+                            contentDescription = null,
+                            tint = ComposeAppTheme.colors.leah,
+                            modifier = Modifier.size(64.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Icon(
+                            painter = painterResource(R.drawable.ic_close),
+                            contentDescription = null,
+                            tint = ComposeAppTheme.colors.lucian,
+                            modifier = Modifier.size(64.dp)
+                        )
+                    }
                     Spacer(Modifier.height(16.dp))
                     Text(
                         text = "An error occurred during the upgrade process: ${upgradeState.errorOrNull}",
@@ -336,12 +373,24 @@ private fun FirmwareUpgradeData(
                     )
                 }
                 is UpgradeState.BluetoothError -> {
-                    Icon(
-                        imageVector = Icons.Default.Bluetooth,
-                        contentDescription = null,
-                        tint = ComposeAppTheme.colors.lucian,
-                        modifier = Modifier.size(48.dp)
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.icon_hardware_wallet_24),
+                            contentDescription = null,
+                            tint = ComposeAppTheme.colors.leah,
+                            modifier = Modifier.size(64.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Icon(
+                            imageVector = Icons.Default.Bluetooth,
+                            contentDescription = null,
+                            tint = ComposeAppTheme.colors.lucian,
+                            modifier = Modifier.size(48.dp)
+                        )
+                    }
                     Spacer(Modifier.height(16.dp))
                     Text(
                         text = "Bluetooth error: ${upgradeState.errorOrNull}",
@@ -367,20 +416,29 @@ private fun FirmwareUpgradeData(
                 is UpgradeState.Finished -> {
                     Box(Modifier.padding(top = 16.dp), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_check),
-                                contentDescription = null,
-                                tint = ComposeAppTheme.colors.green50,
-                                modifier = Modifier.size(48.dp)
-                            )
-                            Spacer(Modifier.height(16.dp))
                             Text(
                                 text = "Finished uploading the firmware!",
                                 color = ComposeAppTheme.colors.leah,
                                 style = ComposeAppTheme.typography.headline1,
                                 textAlign = TextAlign.Center
                             )
-                            Spacer(Modifier.height(16.dp))
+                            Spacer(Modifier.height(32.dp))
+                            Row {
+                                Icon(
+                                    painter = painterResource(R.drawable.icon_hardware_wallet_24),
+                                    contentDescription = null,
+                                    tint = ComposeAppTheme.colors.leah,
+                                    modifier = Modifier.size(64.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_check),
+                                    contentDescription = null,
+                                    tint = ComposeAppTheme.colors.remus,
+                                    modifier = Modifier.size(64.dp)
+                                )
+                            }
+                            Spacer(Modifier.height(32.dp))
                             Text(
                                 text = "Your device should be able to turn back on",
                                 color = ComposeAppTheme.colors.leah,
@@ -439,7 +497,7 @@ fun HardwareWalletFirmwareUpgradeScreen(
     val deviceVersionInfo by viewModel.deviceVersionInfo.collectAsState()
     val deviceName by viewModel.deviceName.collectAsState()
     val downloadedFirmwareVersion by viewModel.downloadedFirmwareVersion.collectAsState()
-    
+
     ComposeAppTheme {
         Column(Modifier.fillMaxSize().background(ComposeAppTheme.colors.tyler)) {
             AppBar(
