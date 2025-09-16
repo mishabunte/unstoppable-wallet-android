@@ -319,6 +319,11 @@ fun SendConfirmationScreen(
                     is SendSolanaHardwareState.Error -> {
                         HardwareSendError(unsignedTxState.caution)
                     }
+
+                    is SendSolanaHardwareState.Sent -> {
+                        HardwareSendSuccess()
+                    }
+
                     is SendSolanaHardwareState.ScanToTransmit -> {
                         HardwareWalletSendCautions(
                             Modifier
@@ -398,6 +403,48 @@ private fun Preview_HardwareSendError() {
     }
 }
 
+@Preview(showBackground = true)
+@Composable
+private fun Preview_HardwareSendSuccess() {
+    ComposeAppTheme {
+        HardwareSendSuccess()
+    }
+}
+
+@Composable
+private fun HardwareSendSuccess() {
+    SectionUniversalLawrence {
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            Column(
+                modifier = Modifier.padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .align(Alignment.CenterHorizontally)
+                        .padding(bottom = 8.dp),
+                    painter = androidx.compose.ui.res.painterResource(R.drawable.ic_check),
+                    contentDescription = null,
+                    tint = ComposeAppTheme.colors.remus,
+                )
+                Text(
+                    text = "Transaction sent",
+                    style = ComposeAppTheme.typography.title3,
+                    color = ComposeAppTheme.colors.leah,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .padding(bottom = 8.dp)
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun HardwareSendError(caution: HSCaution) {
     SectionUniversalLawrence {
@@ -430,7 +477,7 @@ private fun HardwareSendError(caution: HSCaution) {
                 Text(
                     text = caution.getDescription() ?: caution.getString(),
                     style = ComposeAppTheme.typography.headline2,
-                    color = ComposeAppTheme.colors.leah,
+                    color = ComposeAppTheme.colors.grey,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Justify,
                     modifier = Modifier
                         .align(Alignment.CenterHorizontally)

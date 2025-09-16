@@ -1,7 +1,6 @@
 package io.horizontalsystems.bankwallet.modules.send.solana
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -23,16 +22,6 @@ fun SendSolanaConfirmationScreen(
     var refresh by remember { mutableStateOf(false) }
 
     val unsignedTxState by sendViewModel.unsignedTxState.collectAsState()
-
-//    LaunchedEffect(Unit) {
-//        if (sendViewModel.isHardwareAccount()) {
-//            val decimals = confirmationData.token?.decimals
-//            val lamports = confirmationData.amount.movePointRight(decimals!!).toLong()
-//            sendViewModel.getUnsignedTransaction(
-//                amount = lamports
-//            )
-//        }
-//    }
 
     LifecycleResumeEffect(Unit) {
         if (refresh) {
