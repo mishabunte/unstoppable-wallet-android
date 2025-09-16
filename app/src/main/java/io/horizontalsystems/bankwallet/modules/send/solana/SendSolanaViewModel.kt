@@ -16,6 +16,7 @@ import io.horizontalsystems.bankwallet.core.ViewModelUiState
 import io.horizontalsystems.bankwallet.core.managers.ConnectivityManager
 import io.horizontalsystems.bankwallet.core.managers.RecentAddressManager
 import io.horizontalsystems.bankwallet.entities.Address
+import io.horizontalsystems.bankwallet.entities.DataState
 import io.horizontalsystems.bankwallet.entities.Wallet
 import io.horizontalsystems.bankwallet.modules.amount.SendAmountService
 import io.horizontalsystems.bankwallet.modules.contacts.ContactsRepository
@@ -32,6 +33,7 @@ import io.horizontalsystems.solanakit.SolanaKit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.math.BigDecimal
@@ -60,9 +62,12 @@ class SendSolanaViewModel(
 
     private var amountState = amountService.stateFlow.value
     private var addressState = addressService.stateFlow.value
-    private val _unsignedTxHex = MutableStateFlow<String?>(null)
-    private val _signedTxHex = MutableStateFlow<String?>(null)
-    val unsignedTxHex: StateFlow<String?> = _unsignedTxHex
+//    private val _unsignedTxHex = MutableStateFlow<String?>(null)
+//    val unsignedTxHex: StateFlow<String?> = _unsignedTxHex
+    private val initialState = if (adapter.isHardwareAccount()) SendSolanaHardwareState.ReadyToLoad else null
+    private val _unsignedTxState = MutableStateFlow<SendSolanaHardwareState?>(initialState)
+    val unsignedTxState: StateFlow<SendSolanaHardwareState?> = _unsignedTxState.asStateFlow()
+
     private var scannedQr: String? = null
 
     var coinRate by mutableStateOf(xRateService.getRate(sendToken.coin.uid))
@@ -112,7 +117,6 @@ class SendSolanaViewModel(
         scannedQr = value
     }
 
-
     fun getConfirmationData(): SendConfirmationData {
         val address = addressState.address!!
         val contact = contactsRepo.getContactsFiltered(
@@ -132,16 +136,28 @@ class SendSolanaViewModel(
     }
 
     fun getUnsignedTransaction(amount: Long) {
+        _unsignedTxState.value = SendSolanaHardwareState.Loading
         val from = wallet.account.type.solanaAddress() ?: throw IllegalStateException("Solana address is not set")
         val to = addressState.solanaAddress.toString()
         val mintAddress = (wallet.token.type as? TokenType.Spl)?.address
         val decimals = min(9, wallet.token.decimals) // SPL token can have max 9 decimals
         viewModelScope.launch {
-            val hex = adapter.getUnsignedTransaction(from=from, to=to, mintAddress=mintAddress, amount=amount, decimals=decimals)
-            _unsignedTxHex.value = hex
+            try {
+                val hex = adapter.getUnsignedTransaction(from=from, to=to, mintAddress=mintAddress, amount=amount, decimals=decimals)
+                _unsignedTxState.value = SendSolanaHardwareState.NFCWritingStarted(hex)
+            } catch (e: Exception) {
+                _unsignedTxState.value = SendSolanaHardwareState.Error(createCaution(e))
+            }
         }
     }
 
+    fun resetHardwareWalletState() {
+        _unsignedTxState.value = initialState
+    }
+
+    fun onNFCWritingSuccess() {
+        _unsignedTxState.value = SendSolanaHardwareState.ScanToTransmit
+    }
 
     fun onClickSend() {
         viewModelScope.launch {
@@ -167,8 +183,11 @@ class SendSolanaViewModel(
             if (totalSolAmount > solBalance)
                 throw EvmError.InsufficientBalanceWithFee
 
-            if (adapter.isHardwareAccount())
+            if (adapter.isHardwareAccount()) {
+                _unsignedTxState.value = SendSolanaHardwareState.Sending
                 adapter.sendRawTransaction(scannedQr!!)
+                _unsignedTxState.value = SendSolanaHardwareState.Sent
+            }
             else {
                 adapter.send(decimalAmount, addressState.solanaAddress!!)
             }
@@ -177,6 +196,7 @@ class SendSolanaViewModel(
 
             recentAddressManager.setRecentAddress(addressState.address!!, BlockchainType.Solana)
         } catch (e: Throwable) {
+            if (isHardwareAccount()) _unsignedTxState.value = SendSolanaHardwareState.Error(createCaution(e))
             sendResult = SendResult.Failed(createCaution(e))
         }
     }
@@ -205,4 +225,37 @@ class SendSolanaViewModel(
         emitState()
     }
 
+}
+
+sealed class SendSolanaHardwareState {
+    data object Loading: SendSolanaHardwareState()
+    data object ReadyToLoad: SendSolanaHardwareState()
+    data object Sending: SendSolanaHardwareState()
+    data object Sent: SendSolanaHardwareState()
+    //data class Success(val unsignedTxHex: String): SendSolanaHardwareState()
+    //data class Error(val error: Throwable): SendSolanaHardwareState()
+    data class Error(val caution: HSCaution): SendSolanaHardwareState()
+    data class NFCWritingStarted(val unsignedTxHex: String): SendSolanaHardwareState()
+    data object ScanToTransmit: SendSolanaHardwareState()
+
+//    fun unsignedTxHexOrNull(): String? {
+//        return when(this) {
+//            is Success -> unsignedTxHex
+//            else -> null
+//        }
+//    }
+
+    fun nfcPayloadOrNull(): String? {
+        return when(this) {
+            is NFCWritingStarted -> unsignedTxHex
+            else -> null
+        }
+    }
+
+    fun errorOrNull(): HSCaution? {
+        return when(this) {
+            is Error -> caution
+            else -> null
+        }
+    }
 }

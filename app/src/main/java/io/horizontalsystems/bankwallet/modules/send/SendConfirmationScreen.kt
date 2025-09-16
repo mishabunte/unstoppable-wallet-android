@@ -15,24 +15,25 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.navigation.NavController
 import io.horizontalsystems.bankwallet.R
 import io.horizontalsystems.bankwallet.core.App
+import io.horizontalsystems.bankwallet.core.HSCaution
 import io.horizontalsystems.bankwallet.core.stats.StatEntity
 import io.horizontalsystems.bankwallet.core.stats.StatEvent
 import io.horizontalsystems.bankwallet.core.stats.StatPage
@@ -44,7 +45,6 @@ import io.horizontalsystems.bankwallet.entities.CurrencyValue
 import io.horizontalsystems.bankwallet.modules.amount.AmountInputType
 import io.horizontalsystems.bankwallet.modules.contacts.model.Contact
 import io.horizontalsystems.bankwallet.modules.fee.HSFeeRaw
-import io.horizontalsystems.bankwallet.modules.hardwarewallet.AnimatedNFCBox
 import io.horizontalsystems.bankwallet.modules.hardwarewallet.HardwareWalletNFCHandler
 import io.horizontalsystems.bankwallet.modules.hardwarewallet.HardwareWalletScanButtons
 import io.horizontalsystems.bankwallet.modules.hardwarewallet.HardwareWalletSendCautions
@@ -53,7 +53,9 @@ import io.horizontalsystems.bankwallet.modules.hardwarewallet.NFCCallbackType
 import io.horizontalsystems.bankwallet.modules.hardwarewallet.StartNFCWriting
 import io.horizontalsystems.bankwallet.modules.hodler.HSHodler
 import io.horizontalsystems.bankwallet.modules.qrscanner.QRScannerActivity
+import io.horizontalsystems.bankwallet.modules.send.solana.SendSolanaHardwareState
 import io.horizontalsystems.bankwallet.ui.compose.ComposeAppTheme
+import io.horizontalsystems.bankwallet.ui.compose.TranslatableString
 import io.horizontalsystems.bankwallet.ui.compose.components.AppBar
 import io.horizontalsystems.bankwallet.ui.compose.components.ButtonPrimaryYellow
 import io.horizontalsystems.bankwallet.ui.compose.components.CellUniversalLawrenceSection
@@ -100,9 +102,11 @@ fun SendConfirmationScreen(
     onClickSend: () -> Unit,
     sendEntryPointDestId: Int,
     title: String? = null,
-    isHardwareSigner: Boolean = false,
-    unsignedTxHex: String? = null,
-    onScannedQR: (String) -> Unit = { _ -> }
+    onScannedQR: (String) -> Unit = { _ -> },
+    unsignedTxState: SendSolanaHardwareState? = null,
+    onHardwareSignerSendClick: () -> Unit = { },
+    onHardwareSignerNFCSuccess: () -> Unit = { },
+    onHardwareSignerCancel: () -> Unit = { }
 ) {
     val closeUntilDestId = if (sendEntryPointDestId == 0) {
         R.id.sendXFragment
@@ -111,13 +115,8 @@ fun SendConfirmationScreen(
     }
     val view = LocalView.current
     val context = LocalContext.current
-    var nfcWritingStarted by remember { mutableStateOf(false) }
-    var scanToTransmit by remember { mutableStateOf(false) }
-    var isSending by remember { mutableStateOf(false) }
-    var qrScannerFinished by remember { mutableStateOf(false) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            qrScannerFinished = true
             val scannedQr = result.data?.getStringExtra(ModuleField.SCAN_ADDRESS)?: ""
             if (scannedQr.startsWith("https://app.hito.dev/eth/tx/#!")) {
                 val txHex = scannedQr.removePrefix("https://app.hito.dev/eth/tx/#!")
@@ -127,17 +126,19 @@ fun SendConfirmationScreen(
             }
         }
     }
-    val nfcHandler = HardwareWalletNFCHandler(context, {
-        scanToTransmit = true
-        nfcWritingStarted = false
-    }, { _ ->
-        HudHelper.showErrorMessage(
-            contenView = view,
-            resId = R.string.HardwareWalletAuthentication_TagError,
-            icon = R.drawable.icon_24_warning_2,
-            iconTint = R.color.white
-        )
-    })
+    val nfcHandler = HardwareWalletNFCHandler(context,
+        onSuccess = {
+            onHardwareSignerNFCSuccess()
+        },
+        onError = { _ ->
+            HudHelper.showErrorMessage(
+                contenView = view,
+                resId = R.string.HardwareWalletAuthentication_TagError,
+                icon = R.drawable.icon_24_warning_2,
+                iconTint = R.color.white
+            )
+        }
+    )
 
     when (sendResult) {
         SendResult.Sending -> {
@@ -291,77 +292,150 @@ fun SendConfirmationScreen(
 
                 VSpacer(height = 16.dp)
 
-                if (isHardwareSigner) {
-                    Log.d("SendConfirmationScreen", "Hardware signer detected, NFC writing initiated")
-                    if (nfcWritingStarted) {
-                        val messageText = "solana.sign:0x${unsignedTxHex}"
+                // Hardware wallet signing section, skipped if not hardware account
+                when (unsignedTxState) {
+                    is SendSolanaHardwareState.Loading, SendSolanaHardwareState.Sending -> {
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .size(112.dp)
+                                .align(Alignment.CenterHorizontally)
+                                .padding(top = 64.dp, bottom = 8.dp),
+                            color = ComposeAppTheme.colors.grey
+                        )
+                    }
+
+                    is SendSolanaHardwareState.NFCWritingStarted -> {
+                        val messageText = "solana.sign:0x${unsignedTxState.unsignedTxHex}"
                         val nfcCallback = NFCCallback(type= NFCCallbackType.SOLANA_SEND, messageText=messageText)
                         StartNFCWriting(nfcHandler,
                             nfcCallback,
                             onCancelClick = {
-                                nfcWritingStarted = false
+                                onHardwareSignerCancel()
                             },
                             text = "Confirm by tapping Hito Wallet"
                         )
-                    } else {
-                        if (scanToTransmit) {
-                            SectionUniversalLawrence {
-                                HardwareWalletSendCautions(
-                                    Modifier
-                                        .padding(horizontal = 8.dp, vertical = 8.dp)
-                                )
-                            }
-                        }
                     }
+
+                    is SendSolanaHardwareState.Error -> {
+                        HardwareSendError(unsignedTxState.caution)
+                    }
+                    is SendSolanaHardwareState.ScanToTransmit -> {
+                        HardwareWalletSendCautions(
+                            Modifier
+                                .padding(horizontal = 8.dp, vertical = 8.dp)
+                        )
+                    }
+                    else -> {}
                 }
             }
 
-            val onSend: () -> Unit = {
-                if (isHardwareSigner) {
-                    nfcWritingStarted = true // For production
-                    //scanToTransmit = true // For aligning buttons
-                } else {
-                    onClickSend()
-                }
-            }
-            if (isHardwareSigner) {
-                if (isSending || !scanToTransmit) {
+            // Hardware wallet signing section, skipped if not hardware account
+            when (unsignedTxState) {
+                is SendSolanaHardwareState.ReadyToLoad -> {
                     SendButton(
                         modifier = Modifier
                             .fillMaxWidth()
                             .align(Alignment.BottomCenter)
                             .padding(start = 16.dp, end = 16.dp, bottom = 48.dp),
                         sendResult = sendResult,
-                        onClickSend = onSend
+                        onClickSend = onHardwareSignerSendClick
                     )
                 }
-                if (scanToTransmit) {
-                    Box(Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.BottomCenter)
-                        .padding(start = 16.dp, end = 16.dp, bottom = 48.dp),
-                        contentAlignment = Alignment.Center) {
+                is SendSolanaHardwareState.ScanToTransmit -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.BottomCenter)
+                            .padding(start = 16.dp, end = 16.dp, bottom = 48.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
                         HardwareWalletScanButtons(
                             onTryAgainClick = {
-                                scanToTransmit = false
-                            }, onContinueClick = {
+                                onHardwareSignerCancel()
+                            },
+                            onContinueClick = {
                                 val intent = QRScannerActivity.getScanQrIntent(context, showPasteButton = false)
                                 launcher.launch(intent)
                             }
                         )
                     }
                 }
-            } else {
-                SendButton(
+                is SendSolanaHardwareState.Error -> {
+                    ButtonPrimaryYellow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.BottomCenter)
+                            .padding(start = 16.dp, end = 16.dp, bottom = 48.dp),
+                        title = stringResource(R.string.Button_TryAgain),
+                        onClick = onHardwareSignerCancel
+                    )
+                }
+                null -> {
+                    SendButton(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.BottomCenter)
+                            .padding(start = 16.dp, end = 16.dp, bottom = 48.dp),
+                        sendResult = sendResult,
+                        onClickSend = onClickSend
+                    )
+                }
+                else -> {}
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun Preview_HardwareSendError() {
+    ComposeAppTheme {
+        val caution = HSCaution(
+            s = TranslatableString.ResString(R.string.LocalBackup_DontForgetPasswordWarning),
+            type = HSCaution.Type.Error,
+        )
+        HardwareSendError(caution)
+    }
+}
+
+@Composable
+private fun HardwareSendError(caution: HSCaution) {
+    SectionUniversalLawrence {
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            Column(
+                modifier = Modifier.padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.BottomCenter)
-                        .padding(start = 16.dp, end = 16.dp, bottom = 48.dp),
-                    sendResult = sendResult,
-                    onClickSend = onSend
+                        .size(64.dp)
+                        .align(Alignment.CenterHorizontally)
+                        .padding(bottom = 8.dp),
+                    painter = androidx.compose.ui.res.painterResource(R.drawable.icon_24_warning_2),
+                    contentDescription = null,
+                    tint = ComposeAppTheme.colors.lucian,
+                )
+                Text(
+                    text = "Error occurred:",
+                    style = ComposeAppTheme.typography.headline1,
+                    color = ComposeAppTheme.colors.leah,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .padding(bottom = 8.dp)
+                )
+                Text(
+                    text = caution.getDescription() ?: caution.getString(),
+                    style = ComposeAppTheme.typography.headline2,
+                    color = ComposeAppTheme.colors.leah,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Justify,
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
                 )
             }
-
         }
     }
 }
