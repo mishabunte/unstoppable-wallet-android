@@ -127,11 +127,10 @@ private fun HardwareWalletAuthenticationStartScreen(
                 if (gifSize != IntSize.Zero) {
                     when (nfcWritingStatus) {
                         is HardwareWalletNFCStatus.Loading -> {
-                            Spacer(Modifier.height(32.dp))
+                            Spacer(Modifier.height(64.dp))
                             CircularProgressIndicator(
-                                modifier = Modifier.size(64.dp),
+                                modifier = Modifier.size(112.dp),
                                 color = ComposeAppTheme.colors.grey,
-                                strokeWidth = 6.dp
                             )
                         }
 

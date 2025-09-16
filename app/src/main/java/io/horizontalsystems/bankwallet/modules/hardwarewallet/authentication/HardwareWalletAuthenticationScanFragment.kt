@@ -16,9 +16,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.CircularProgressIndicator
-import androidx.compose.material.Icon
-import androidx.compose.material.Text
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.runtime.Composable
@@ -40,6 +40,7 @@ import io.horizontalsystems.bankwallet.core.slideFromBottom
 import io.horizontalsystems.bankwallet.core.slideFromRight
 import io.horizontalsystems.bankwallet.core.utils.ModuleField
 import io.horizontalsystems.bankwallet.modules.hardwarewallet.DottedList
+import io.horizontalsystems.bankwallet.modules.hardwarewallet.HardwareWalletScanButtons
 import io.horizontalsystems.bankwallet.modules.hardwarewallet.TokenCheckResponse
 import io.horizontalsystems.bankwallet.modules.qrscanner.QRScannerActivity
 import io.horizontalsystems.bankwallet.ui.compose.ComposeAppTheme
@@ -82,7 +83,7 @@ private fun HardwareWalletAuthenticationScanScreen(
         },
         onFinishClick = {
             viewModel.resetAuthenticationResult()
-            navController?.slideFromBottom(R.id.mainFragment)
+            navController?.popBackStack(R.id.mainFragment, false)
         }
     )
 }
@@ -96,7 +97,7 @@ private fun Preview_HardwareWalletAuthenticationStateScreen() {
     )
     HardwareWalletAuthenticationStateScreen(
         null,
-        HardwareWalletAuthenticationStatus.Success(testTokenCheckResponse),
+        HardwareWalletAuthenticationStatus.TapToScan,
         {},{})
 }
 
@@ -141,9 +142,8 @@ private fun HardwareWalletAuthenticationStateScreen(
                             verticalArrangement = Arrangement.Center
                         ) {
                             CircularProgressIndicator(
-                                modifier = Modifier.size(64.dp),
                                 color = ComposeAppTheme.colors.grey,
-                                strokeWidth = 6.dp
+                                modifier = Modifier.size(112.dp)
                             )
                             Spacer(Modifier.height(16.dp))
                             Text(
@@ -218,44 +218,14 @@ private fun HardwareWalletTapToScanScreen(navController: NavController?, onClick
         }
         Column(
             modifier = Modifier
-                .padding(horizontal = 32.dp, vertical = 48.dp)
+                .padding(horizontal = 16.dp, vertical = 48.dp)
                 .align(Alignment.BottomCenter),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = "Try again if it has detected an error",
-                style = ComposeAppTheme.typography.body,
-                color = ComposeAppTheme.colors.grey,
-                fontSize = 16.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 16.dp)
+            HardwareWalletScanButtons(
+                onContinueClick = onClick,
+                onTryAgainClick = {navController?.popBackStack()}
             )
-            Spacer(Modifier.width(4.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                ButtonPrimaryYellowWithIcon(
-                    modifier = Modifier
-                        .padding(8.dp),
-                    title = stringResource(R.string.Button_Continue),
-                    icon = R.drawable.ic_qr_scan_20,
-                    onClick = {
-                        onClick()
-//                        val intent = QRScannerActivity.getScanQrIntent(context, showPasteButton = false)
-//                        launcher.launch(intent)
-                    }
-                )
-//                Spacer(Modifier.width(4.dp))
-                ButtonPrimaryTransparent(
-                    modifier = Modifier
-                        .padding(8.dp),
-                    title = stringResource(R.string.Button_TryAgain),
-                    onClick = {
-                        navController?.popBackStack()
-                    }
-                )
-            }
         }
     }
 }
