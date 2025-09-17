@@ -1,12 +1,12 @@
 package io.horizontalsystems.bankwallet.modules.send
 
 import android.app.Activity
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,7 +24,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -46,14 +48,14 @@ import io.horizontalsystems.bankwallet.modules.amount.AmountInputType
 import io.horizontalsystems.bankwallet.modules.contacts.model.Contact
 import io.horizontalsystems.bankwallet.modules.fee.HSFeeRaw
 import io.horizontalsystems.bankwallet.modules.hardwarewallet.HardwareWalletNFCHandler
-import io.horizontalsystems.bankwallet.modules.hardwarewallet.HardwareWalletScanButtons
-import io.horizontalsystems.bankwallet.modules.hardwarewallet.HardwareWalletSendCautions
+import io.horizontalsystems.bankwallet.modules.hardwarewallet.scanui.HardwareWalletSendCautions
 import io.horizontalsystems.bankwallet.modules.hardwarewallet.NFCCallback
 import io.horizontalsystems.bankwallet.modules.hardwarewallet.NFCCallbackType
+import io.horizontalsystems.bankwallet.modules.hardwarewallet.SendTransactionHardwareState
 import io.horizontalsystems.bankwallet.modules.hardwarewallet.StartNFCWriting
+import io.horizontalsystems.bankwallet.modules.hardwarewallet.scanui.HardwareWalletScanButtons
 import io.horizontalsystems.bankwallet.modules.hodler.HSHodler
 import io.horizontalsystems.bankwallet.modules.qrscanner.QRScannerActivity
-import io.horizontalsystems.bankwallet.modules.send.solana.SendSolanaHardwareState
 import io.horizontalsystems.bankwallet.ui.compose.ComposeAppTheme
 import io.horizontalsystems.bankwallet.ui.compose.TranslatableString
 import io.horizontalsystems.bankwallet.ui.compose.components.AppBar
@@ -103,7 +105,7 @@ fun SendConfirmationScreen(
     sendEntryPointDestId: Int,
     title: String? = null,
     onScannedQR: (String) -> Unit = { _ -> },
-    unsignedTxState: SendSolanaHardwareState? = null,
+    unsignedTxState: SendTransactionHardwareState? = null,
     onHardwareSignerSendClick: () -> Unit = { },
     onHardwareSignerNFCSuccess: () -> Unit = { },
     onHardwareSignerCancel: () -> Unit = { }
@@ -118,12 +120,7 @@ fun SendConfirmationScreen(
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             val scannedQr = result.data?.getStringExtra(ModuleField.SCAN_ADDRESS)?: ""
-            if (scannedQr.startsWith("https://app.hito.dev/eth/tx/#!")) {
-                val txHex = scannedQr.removePrefix("https://app.hito.dev/eth/tx/#!")
-                Log.d("SendConfirmationScreen", "QR Code scanned: $scannedQr")
-                onScannedQR(txHex)
-                onClickSend()
-            }
+            onScannedQR(scannedQr)
         }
     }
     val nfcHandler = HardwareWalletNFCHandler(context,
@@ -294,7 +291,7 @@ fun SendConfirmationScreen(
 
                 // Hardware wallet signing section, skipped if not hardware account
                 when (unsignedTxState) {
-                    is SendSolanaHardwareState.Loading, SendSolanaHardwareState.Sending -> {
+                    is SendTransactionHardwareState.Loading, SendTransactionHardwareState.Sending -> {
                         CircularProgressIndicator(
                             modifier = Modifier
                                 .size(112.dp)
@@ -304,7 +301,7 @@ fun SendConfirmationScreen(
                         )
                     }
 
-                    is SendSolanaHardwareState.NFCWritingStarted -> {
+                    is SendTransactionHardwareState.NFCWritingStarted -> {
                         val messageText = "solana.sign:0x${unsignedTxState.unsignedTxHex}"
                         val nfcCallback = NFCCallback(type= NFCCallbackType.SOLANA_SEND, messageText=messageText)
                         StartNFCWriting(nfcHandler,
@@ -316,19 +313,16 @@ fun SendConfirmationScreen(
                         )
                     }
 
-                    is SendSolanaHardwareState.Error -> {
+                    is SendTransactionHardwareState.Error -> {
                         HardwareSendError(unsignedTxState.caution)
                     }
 
-                    is SendSolanaHardwareState.Sent -> {
+                    is SendTransactionHardwareState.Sent -> {
                         HardwareSendSuccess()
                     }
 
-                    is SendSolanaHardwareState.ScanToTransmit -> {
-                        HardwareWalletSendCautions(
-                            Modifier
-                                .padding(horizontal = 8.dp, vertical = 8.dp)
-                        )
+                    is SendTransactionHardwareState.ScanToTransmit -> {
+                        HardwareWalletSendCautions()
                     }
                     else -> {}
                 }
@@ -336,7 +330,7 @@ fun SendConfirmationScreen(
 
             // Hardware wallet signing section, skipped if not hardware account
             when (unsignedTxState) {
-                is SendSolanaHardwareState.ReadyToLoad -> {
+                is SendTransactionHardwareState.ReadyToLoad -> {
                     SendButton(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -346,7 +340,7 @@ fun SendConfirmationScreen(
                         onClickSend = onHardwareSignerSendClick
                     )
                 }
-                is SendSolanaHardwareState.ScanToTransmit -> {
+                is SendTransactionHardwareState.ScanToTransmit -> {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -365,7 +359,7 @@ fun SendConfirmationScreen(
                         )
                     }
                 }
-                is SendSolanaHardwareState.Error -> {
+                is SendTransactionHardwareState.Error -> {
                     ButtonPrimaryYellow(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -412,75 +406,53 @@ private fun Preview_HardwareSendSuccess() {
 }
 
 @Composable
-private fun HardwareSendSuccess() {
+fun HardwareSendSuccess() {
     SectionUniversalLawrence {
-        Box(
-            modifier = Modifier.fillMaxWidth(),
-            contentAlignment = Alignment.TopCenter
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(
-                modifier = Modifier.padding(32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Icon(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .align(Alignment.CenterHorizontally)
-                        .padding(bottom = 8.dp),
-                    painter = androidx.compose.ui.res.painterResource(R.drawable.ic_check),
-                    contentDescription = null,
-                    tint = ComposeAppTheme.colors.remus,
-                )
-                Text(
-                    text = "Transaction sent",
-                    style = ComposeAppTheme.typography.title3,
-                    color = ComposeAppTheme.colors.leah,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    modifier = Modifier
-                        .align(Alignment.CenterHorizontally)
-                        .padding(bottom = 8.dp)
-                )
-            }
+            Icon(
+                modifier = Modifier.size(32.dp),
+                painter = painterResource(R.drawable.ic_check),
+                contentDescription = null,
+                tint = ComposeAppTheme.colors.remus,
+            )
+            Spacer(Modifier.weight(1f))
+            Text(
+                text = "Transaction sent",
+                style = ComposeAppTheme.typography.body,
+                color = ComposeAppTheme.colors.leah,
+                textAlign = TextAlign.End,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
         }
     }
 }
 
 @Composable
-private fun HardwareSendError(caution: HSCaution) {
+fun HardwareSendError(caution: HSCaution) {
     SectionUniversalLawrence {
-        Box(
-            modifier = Modifier.fillMaxWidth(),
-            contentAlignment = Alignment.TopCenter
+        Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier.padding(32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .align(Alignment.CenterHorizontally)
-                        .padding(bottom = 8.dp),
-                    painter = androidx.compose.ui.res.painterResource(R.drawable.icon_24_warning_2),
+                    modifier = Modifier.size(32.dp),
+                    painter = painterResource(R.drawable.ic_warning_24),
                     contentDescription = null,
                     tint = ComposeAppTheme.colors.lucian,
                 )
-                Text(
-                    text = "Error occurred:",
-                    style = ComposeAppTheme.typography.headline1,
-                    color = ComposeAppTheme.colors.leah,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    modifier = Modifier
-                        .align(Alignment.CenterHorizontally)
-                        .padding(bottom = 8.dp)
-                )
+                Spacer(Modifier.weight(1f))
                 Text(
                     text = caution.getDescription() ?: caution.getString(),
-                    style = ComposeAppTheme.typography.headline2,
-                    color = ComposeAppTheme.colors.grey,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Justify,
-                    modifier = Modifier
-                        .align(Alignment.CenterHorizontally)
+                    style = ComposeAppTheme.typography.body,
+                    color = ComposeAppTheme.colors.leah,
+                    textAlign = TextAlign.End,
                 )
             }
         }

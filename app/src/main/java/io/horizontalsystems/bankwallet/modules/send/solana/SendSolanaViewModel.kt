@@ -1,6 +1,5 @@
 package io.horizontalsystems.bankwallet.modules.send.solana
 
-import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -16,10 +15,10 @@ import io.horizontalsystems.bankwallet.core.ViewModelUiState
 import io.horizontalsystems.bankwallet.core.managers.ConnectivityManager
 import io.horizontalsystems.bankwallet.core.managers.RecentAddressManager
 import io.horizontalsystems.bankwallet.entities.Address
-import io.horizontalsystems.bankwallet.entities.DataState
 import io.horizontalsystems.bankwallet.entities.Wallet
 import io.horizontalsystems.bankwallet.modules.amount.SendAmountService
 import io.horizontalsystems.bankwallet.modules.contacts.ContactsRepository
+import io.horizontalsystems.bankwallet.modules.hardwarewallet.SendTransactionHardwareState
 import io.horizontalsystems.bankwallet.modules.send.SendConfirmationData
 import io.horizontalsystems.bankwallet.modules.send.SendErrorInsufficientBalance
 import io.horizontalsystems.bankwallet.modules.send.SendResult
@@ -36,6 +35,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.IOException
 import java.math.BigDecimal
 import java.net.UnknownHostException
 import kotlin.math.min
@@ -64,9 +64,9 @@ class SendSolanaViewModel(
     private var addressState = addressService.stateFlow.value
 //    private val _unsignedTxHex = MutableStateFlow<String?>(null)
 //    val unsignedTxHex: StateFlow<String?> = _unsignedTxHex
-    private val initialState = if (adapter.isHardwareAccount()) SendSolanaHardwareState.ReadyToLoad else null
-    private val _unsignedTxState = MutableStateFlow<SendSolanaHardwareState?>(initialState)
-    val unsignedTxState: StateFlow<SendSolanaHardwareState?> = _unsignedTxState.asStateFlow()
+    private val initialState = if (adapter.isHardwareAccount()) SendTransactionHardwareState.ReadyToLoad else null
+    private val _unsignedTxState = MutableStateFlow<SendTransactionHardwareState?>(initialState)
+    val unsignedTxState: StateFlow<SendTransactionHardwareState?> = _unsignedTxState.asStateFlow()
 
     private var scannedQr: String? = null
 
@@ -113,8 +113,18 @@ class SendSolanaViewModel(
         addressService.setAddress(address)
     }
 
-    fun setScannedQr(value: String?) {
-        scannedQr = value
+    fun onScannedQR(value: String?) {
+        if (value == null) {
+            _unsignedTxState.value = SendTransactionHardwareState.Error(createCaution(IOException("Scan Error")))
+            return
+        }
+        if (value.startsWith("https://app.hito.dev/eth/tx/#!")) {
+            scannedQr = value.removePrefix("https://app.hito.dev/eth/tx/#!")
+            onClickSend()
+        } else {
+            _unsignedTxState.value = SendTransactionHardwareState.Error(createCaution(IOException("Scan Error")))
+            return
+        }
     }
 
     fun getConfirmationData(): SendConfirmationData {
@@ -136,7 +146,7 @@ class SendSolanaViewModel(
     }
 
     fun getUnsignedTransaction(amount: Long) {
-        _unsignedTxState.value = SendSolanaHardwareState.Loading
+        _unsignedTxState.value = SendTransactionHardwareState.Loading
         val from = wallet.account.type.solanaAddress() ?: throw IllegalStateException("Solana address is not set")
         val to = addressState.solanaAddress.toString()
         val mintAddress = (wallet.token.type as? TokenType.Spl)?.address
@@ -144,9 +154,9 @@ class SendSolanaViewModel(
         viewModelScope.launch {
             try {
                 val hex = adapter.getUnsignedTransaction(from=from, to=to, mintAddress=mintAddress, amount=amount, decimals=decimals)
-                _unsignedTxState.value = SendSolanaHardwareState.NFCWritingStarted(hex)
+                _unsignedTxState.value = SendTransactionHardwareState.NFCWritingStarted(hex)
             } catch (e: Exception) {
-                _unsignedTxState.value = SendSolanaHardwareState.Error(createCaution(e))
+                _unsignedTxState.value = SendTransactionHardwareState.Error(createCaution(e))
             }
         }
     }
@@ -156,7 +166,7 @@ class SendSolanaViewModel(
     }
 
     fun onNFCWritingSuccess() {
-        _unsignedTxState.value = SendSolanaHardwareState.ScanToTransmit
+        _unsignedTxState.value = SendTransactionHardwareState.ScanToTransmit
     }
 
     fun onClickSend() {
@@ -184,9 +194,9 @@ class SendSolanaViewModel(
                 throw EvmError.InsufficientBalanceWithFee
 
             if (adapter.isHardwareAccount()) {
-                _unsignedTxState.value = SendSolanaHardwareState.Sending
+                _unsignedTxState.value = SendTransactionHardwareState.Sending
                 adapter.sendRawTransaction(scannedQr!!)
-                _unsignedTxState.value = SendSolanaHardwareState.Sent
+                _unsignedTxState.value = SendTransactionHardwareState.Sent
             }
             else {
                 adapter.send(decimalAmount, addressState.solanaAddress!!)
@@ -196,7 +206,7 @@ class SendSolanaViewModel(
 
             recentAddressManager.setRecentAddress(addressState.address!!, BlockchainType.Solana)
         } catch (e: Throwable) {
-            if (isHardwareAccount()) _unsignedTxState.value = SendSolanaHardwareState.Error(createCaution(e))
+            if (isHardwareAccount()) _unsignedTxState.value = SendTransactionHardwareState.Error(createCaution(e))
             sendResult = SendResult.Failed(createCaution(e))
         }
     }
@@ -225,37 +235,4 @@ class SendSolanaViewModel(
         emitState()
     }
 
-}
-
-sealed class SendSolanaHardwareState {
-    data object Loading: SendSolanaHardwareState()
-    data object ReadyToLoad: SendSolanaHardwareState()
-    data object Sending: SendSolanaHardwareState()
-    data object Sent: SendSolanaHardwareState()
-    //data class Success(val unsignedTxHex: String): SendSolanaHardwareState()
-    //data class Error(val error: Throwable): SendSolanaHardwareState()
-    data class Error(val caution: HSCaution): SendSolanaHardwareState()
-    data class NFCWritingStarted(val unsignedTxHex: String): SendSolanaHardwareState()
-    data object ScanToTransmit: SendSolanaHardwareState()
-
-//    fun unsignedTxHexOrNull(): String? {
-//        return when(this) {
-//            is Success -> unsignedTxHex
-//            else -> null
-//        }
-//    }
-
-    fun nfcPayloadOrNull(): String? {
-        return when(this) {
-            is NFCWritingStarted -> unsignedTxHex
-            else -> null
-        }
-    }
-
-    fun errorOrNull(): HSCaution? {
-        return when(this) {
-            is Error -> caution
-            else -> null
-        }
-    }
 }

@@ -53,7 +53,7 @@ fun SendSolanaConfirmationScreen(
         memo = confirmationData.memo,
         rbfEnabled = confirmationData.rbfEnabled,
         onClickSend = sendViewModel::onClickSend,
-        onScannedQR = sendViewModel::setScannedQr,
+        onScannedQR = sendViewModel::onScannedQR,
         unsignedTxState = unsignedTxState,
         onHardwareSignerSendClick = {
             val decimals = confirmationData.token?.decimals
