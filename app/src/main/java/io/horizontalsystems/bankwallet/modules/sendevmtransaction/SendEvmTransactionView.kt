@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,9 +27,12 @@ import io.horizontalsystems.bankwallet.core.stats.StatEvent
 import io.horizontalsystems.bankwallet.core.stats.StatPage
 import io.horizontalsystems.bankwallet.core.stats.stat
 import io.horizontalsystems.bankwallet.modules.evmfee.Cautions
-import io.horizontalsystems.bankwallet.modules.hardwarewallet.HardwareWalletSendCautions
+import io.horizontalsystems.bankwallet.modules.hardwarewallet.scanui.HardwareWalletSendCautions
+import io.horizontalsystems.bankwallet.modules.hardwarewallet.SendTransactionHardwareState
 import io.horizontalsystems.bankwallet.modules.multiswap.ui.DataField
 import io.horizontalsystems.bankwallet.modules.multiswap.ui.DataFieldFee
+import io.horizontalsystems.bankwallet.modules.send.HardwareSendError
+import io.horizontalsystems.bankwallet.modules.send.HardwareSendSuccess
 import io.horizontalsystems.bankwallet.modules.send.SendModule
 import io.horizontalsystems.bankwallet.modules.send.evm.settings.SendEvmNonceViewModel
 import io.horizontalsystems.bankwallet.ui.compose.ComposeAppTheme
@@ -65,8 +69,7 @@ fun SendEvmTransactionView(
     transactionFields: List<DataField>,
     networkFee: SendModule.AmountData?,
     statPage: StatPage,
-    isHardwareSigner: Boolean = false,
-    scanToTransmit: Boolean = false,
+    unsignedTxState: SendTransactionHardwareState? = null
 ) {
     Column {
         items.forEach { sectionViewItem ->
@@ -95,13 +98,29 @@ fun SendEvmTransactionView(
             Cautions(cautions)
         }
         VSpacer(height = 16.dp)
-        if (isHardwareSigner && scanToTransmit) {
-            SectionUniversalLawrence {
-                HardwareWalletSendCautions(
-                    Modifier
-                        .padding(horizontal = 8.dp, vertical = 8.dp)
+        when (unsignedTxState) {
+            is SendTransactionHardwareState.Loading, SendTransactionHardwareState.Sending -> {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .size(112.dp)
+                        .align(Alignment.CenterHorizontally)
+                        .padding(top = 64.dp, bottom = 8.dp),
+                    color = ComposeAppTheme.colors.grey
                 )
             }
+
+            is SendTransactionHardwareState.Error -> {
+                HardwareSendError(unsignedTxState.caution)
+            }
+
+            is SendTransactionHardwareState.Sent -> {
+                HardwareSendSuccess()
+            }
+
+            is SendTransactionHardwareState.ScanToTransmit -> {
+                HardwareWalletSendCautions()
+            }
+            else -> {}
         }
     }
 }

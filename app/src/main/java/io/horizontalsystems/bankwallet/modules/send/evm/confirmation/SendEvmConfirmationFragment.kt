@@ -24,27 +24,19 @@ import androidx.navigation.NavController
 import io.horizontalsystems.bankwallet.R
 import io.horizontalsystems.bankwallet.core.AppLogger
 import io.horizontalsystems.bankwallet.core.BaseComposeFragment
-import io.horizontalsystems.bankwallet.core.managers.toSignature
-import io.horizontalsystems.bankwallet.core.shorten
 import io.horizontalsystems.bankwallet.core.slideFromBottom
 import io.horizontalsystems.bankwallet.core.stats.StatEvent
 import io.horizontalsystems.bankwallet.core.stats.StatPage
 import io.horizontalsystems.bankwallet.core.stats.stat
-import io.horizontalsystems.bankwallet.core.toHexString
 import io.horizontalsystems.bankwallet.core.utils.ModuleField
-import io.horizontalsystems.bankwallet.entities.DataState
 import io.horizontalsystems.bankwallet.modules.confirm.ConfirmTransactionScreen
-import io.horizontalsystems.bankwallet.modules.hardwarewallet.AnimatedNFCBox
 import io.horizontalsystems.bankwallet.modules.hardwarewallet.HardwareWalletNFCHandler
-import io.horizontalsystems.bankwallet.modules.hardwarewallet.HardwareWalletScanButtons
-import io.horizontalsystems.bankwallet.modules.hardwarewallet.HardwareWalletSignViewModel
-import io.horizontalsystems.bankwallet.modules.hardwarewallet.LoadingScreen
+import io.horizontalsystems.bankwallet.modules.hardwarewallet.HardwareWalletEvmSignViewModel
 import io.horizontalsystems.bankwallet.modules.hardwarewallet.NFCCallback
 import io.horizontalsystems.bankwallet.modules.hardwarewallet.NFCCallbackType
+import io.horizontalsystems.bankwallet.modules.hardwarewallet.SendTransactionHardwareState
 import io.horizontalsystems.bankwallet.modules.hardwarewallet.StartNFCWriting
-import io.horizontalsystems.bankwallet.modules.hardwarewallet.decodeRawTransactionSignature
-import io.horizontalsystems.bankwallet.modules.hardwarewallet.toByteArray
-import io.horizontalsystems.bankwallet.modules.hardwarewallet.toHex
+import io.horizontalsystems.bankwallet.modules.hardwarewallet.scanui.HardwareWalletScanButtons
 import io.horizontalsystems.bankwallet.modules.qrscanner.QRScannerActivity
 import io.horizontalsystems.bankwallet.modules.send.evm.SendEvmData
 import io.horizontalsystems.bankwallet.modules.send.evm.SendEvmModule
@@ -52,7 +44,6 @@ import io.horizontalsystems.bankwallet.modules.sendevmtransaction.SendEvmTransac
 import io.horizontalsystems.bankwallet.ui.compose.components.ButtonPrimaryYellow
 import io.horizontalsystems.core.SnackbarDuration
 import io.horizontalsystems.core.helpers.HudHelper
-import io.horizontalsystems.core.toHexString
 import io.horizontalsystems.ethereumkit.models.Address
 import io.horizontalsystems.ethereumkit.models.TransactionData
 import io.horizontalsystems.marketkit.models.BlockchainType
@@ -119,29 +110,21 @@ private fun SendEvmConfirmationScreen(
         )
     )
     val uiState = viewModel.uiState
-    var qrScannerFinished by remember { mutableStateOf(false) }
     val view = LocalView.current
     val context = LocalContext.current
 
-    val vm: HardwareWalletSignViewModel = viewModel(
-        factory = HardwareWalletSignViewModel.Factory(viewModel.sendTransactionService)
+    val hardwareWalletSignViewModel: HardwareWalletEvmSignViewModel = viewModel(
+        factory = HardwareWalletEvmSignViewModel.Factory(viewModel.sendTransactionService, input.isHardwareSigner)
     )
 
-    val state by vm.unsignedHex.collectAsState(initial = DataState.Loading)
+    val unsignedTxState by hardwareWalletSignViewModel.unsignedTxState.collectAsState(initial = SendTransactionHardwareState.ReadyToLoad)
 
-    var isSending by remember { mutableStateOf(false) }
-    var isTxLoaded by remember { mutableStateOf(false) }
-
-    var scanToTransmit by remember { mutableStateOf(false) }
-    var txData by remember { mutableStateOf<String?>(null) }
     var messageHex by remember { mutableStateOf<String?>(null) }
 
-    var nfcWritingStarted by remember { mutableStateOf(false) }
     val nfcHandler = HardwareWalletNFCHandler(
         context,
         onSuccess = {
-            scanToTransmit = true
-            nfcWritingStarted = false
+            hardwareWalletSignViewModel.onNFCWritingSuccess()
         },
         onError = {
             HudHelper.showErrorMessage(
@@ -157,85 +140,69 @@ private fun SendEvmConfirmationScreen(
 
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            qrScannerFinished = true
             val scannedQr = result.data?.getStringExtra(ModuleField.SCAN_ADDRESS)?: ""
-            if (scannedQr.startsWith("https://app.hito.dev/eth/tx/#!")) {
-                coroutineScope.launch {
-                    try {
-                        val txHex = scannedQr.removePrefix("https://app.hito.dev/eth/tx/#!")
-                        val signature = decodeRawTransactionSignature(txHex)
-                        val signatureHex = signature?.toHex()
-                        isSending = true
-                        viewModel.sendTransactionService.sendTransaction(signatureHex)
-                        stat(page = StatPage.SendConfirmation, event = StatEvent.Send)
-                        HudHelper.showSuccessMessage(view, R.string.Hud_Text_Done)
-                        delay(1200)
-                        navController.popBackStack(input.sendEntryPointDestId, true)
-                    } catch (t: Throwable) {
-                        logger.warning("failed", t)
-                        if (t.message != null) {
-                            HudHelper.showErrorMessage(view, t.message!!)
-                        } else {
-                            HudHelper.showErrorMessage(view, t.javaClass.simpleName)
-                        }
-                    }
-                }
-            } else if (scannedQr.startsWith("evm.sig:")) {
-                val signatureHex = scannedQr.removePrefix("evm.sig:")
-                isSending = true
-                if (messageHex == null) {
-                    coroutineScope.launch {
-                        try {
-                            viewModel.sendTransactionService.sendTransaction(signatureHex)
-                            stat(page = StatPage.SendConfirmation, event = StatEvent.Send)
-                            HudHelper.showSuccessMessage(view, R.string.Hud_Text_Done)
-                            delay(1200)
-                            navController.popBackStack(input.sendEntryPointDestId, true)
-                        } catch (t: Throwable) {
-                            logger.warning("failed", t)
-                            if (t.message != null) {
-                                HudHelper.showErrorMessage(view, t.message!!.shorten())
-                            } else {
-                                HudHelper.showErrorMessage(view, t.javaClass.simpleName)
-                            }
-                        }
-                    }
-                } else {
-                    val signature = signatureHex.toSignature()
-                    val shex = signature?.toByteArray().toHexString()
-                    // TODO: handle case when signature is null
-//                    signMessageViewModel?.acceptWithSignature(shex!!)
-                }
-            } else {
-                HudHelper.showErrorMessage(view, R.string.Error)
-                //TODO todo handle error
-                //viewModel?.sendTransactionService?.(IOException("Signature Scan Error"))
-//                signMessageViewModel?.showSignError = true
-            }
+            hardwareWalletSignViewModel.onScannedQR(scannedQr)
+        }
+    }
+
+    LaunchedEffect(unsignedTxState) {
+        if (unsignedTxState is SendTransactionHardwareState.Sent) {
+            delay(1200)
+            navController.popBackStack(input.sendEntryPointDestId, true)
         }
     }
 
     val ownAddress = viewModel.sendTransactionService.ownAddress()
 
-    LaunchedEffect(Unit) { vm.loadUnsigned() }
-    when (val s = state) {
-        DataState.Loading -> LoadingScreen(loadingMessage = "Creating Transaction...")
-        is DataState.Success -> {
-            txData = s.data
-            isTxLoaded = true
-            viewModel.sendTransactionService.pauseSync()
-            //feeModel?.pauseSync()
-        }
-        is DataState.Error -> {
-            isTxLoaded = false
-            HudHelper.showErrorMessage(
-                contenView = LocalView.current,
-                resId = R.string.HardwareWallet_TransactionError,
-                icon = R.drawable.icon_24_warning_2,
-                iconTint = R.color.white
+    when (unsignedTxState) {
+        SendTransactionHardwareState.Sending -> {
+            HudHelper.showInProcessMessage(
+                view,
+                R.string.Send_Sending,
+                SnackbarDuration.INDEFINITE
             )
         }
+
+        is SendTransactionHardwareState.Sent -> {
+            HudHelper.showSuccessMessage(
+                view,
+                R.string.Send_Success,
+                SnackbarDuration.LONG
+            )
+        }
+
+        is SendTransactionHardwareState.Error -> {
+            val caution = (unsignedTxState as SendTransactionHardwareState.Error).caution
+            HudHelper.showErrorMessage(view, caution.getDescription() ?: caution.getString())
+        }
+
+        else -> Unit
     }
+
+//    when (val s = state) {
+//        SendTransactionHardwareState.Loading -> {
+//            CircularProgressIndicator(
+//                modifier = Modifier
+//                    .size(112.dp)
+//                    .padding(top = 64.dp, bottom = 8.dp),
+//                color = ComposeAppTheme.colors.grey
+//            )
+//        }
+//        is SendTransactionHardwareState.NFCWritingStarted -> {
+//            txData = s.unsignedTxHex
+//            viewModel.sendTransactionService.pauseSync()
+//            //feeModel?.pauseSync()
+//        }
+//        is SendTransactionHardwareState.Error -> {
+//            HudHelper.showErrorMessage(
+//                contenView = LocalView.current,
+//                resId = R.string.HardwareWallet_TransactionError,
+//                icon = R.drawable.icon_24_warning_2,
+//                iconTint = R.color.white
+//            )
+//        }
+//        else -> {}
+//    }
 
     ConfirmTransactionScreen(
         onClickBack = { navController.popBackStack() },
@@ -247,80 +214,139 @@ private fun SendEvmConfirmationScreen(
 
             var buttonEnabled by remember { mutableStateOf(true) }
 
-            if (!viewModel.isHardwareSigner) {
-                ButtonPrimaryYellow(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 16.dp, end = 16.dp),
-                    title = stringResource(R.string.Send_Confirmation_Send_Button),
-                    onClick = {
-                        logger.info("click send button")
-
-                        coroutineScope.launch {
-                            buttonEnabled = false
-                            HudHelper.showInProcessMessage(view, R.string.Send_Sending, SnackbarDuration.INDEFINITE)
-
-                            try {
-                                logger.info("sending tx")
-                                viewModel.send()
-                                logger.info("success")
-                                stat(page = StatPage.SendConfirmation, event = StatEvent.Send)
-
-                                HudHelper.showSuccessMessage(view, R.string.Hud_Text_Done)
-                                delay(1200)
-
-                                navController.popBackStack(input.sendEntryPointDestId, true)
-                            } catch (t: Throwable) {
-                                logger.warning("failed", t)
-                                HudHelper.showErrorMessage(view, t.javaClass.simpleName)
-                            }
-
-                            buttonEnabled = true
+            when (val s = unsignedTxState) {
+                is SendTransactionHardwareState.ReadyToLoad -> {
+                    ButtonPrimaryYellow(
+                        modifier = Modifier.fillMaxWidth(),
+                        title = stringResource(R.string.Send_Confirmation_Send_Button),
+                        onClick = {
+                            hardwareWalletSignViewModel.loadUnsigned()
                         }
-                    },
-                    enabled = uiState.sendEnabled && buttonEnabled
-                )
-            } else {
-                if (!scanToTransmit) {
-                    if (nfcWritingStarted) {
-                        val messageText = if (messageHex != null) {
-                            "evm.msg:$ownAddress:$messageHex"
-                        } else {
-                            "evm.sign:$ownAddress:$txData"
-                        }
-                        val nfcCallback = NFCCallback(
-                            type = NFCCallbackType.ETH_SEND,
-                            messageText = messageText
-                        )
-                        StartNFCWriting(
-                            nfcHandler,
-                            nfcCallback,
-                            onCancelClick =
-                                { nfcWritingStarted = false }
-                            ,
-                            text =
-                                "Confirm by tapping Hito Wallet"
-                        )
+                    )
+                }
+
+                is SendTransactionHardwareState.NFCWritingStarted -> {
+                    val messageText = if (messageHex != null) {
+                        "evm.msg:$ownAddress:$messageHex"
                     } else {
-                        ButtonPrimaryYellow(
-                            modifier = Modifier.fillMaxWidth(),
-                            title = "Send",
-                            onClick = {
-                                nfcWritingStarted = true // For production
-                                //scanToTransmit = true // For alignment buttons
-                            }
-                        )
+                        "evm.sign:$ownAddress:${s.unsignedTxHex}"
                     }
-                } else {
+                    val nfcCallback = NFCCallback(
+                        type = NFCCallbackType.ETH_SEND,
+                        messageText = messageText
+                    )
+                    StartNFCWriting(
+                        nfcHandler,
+                        nfcCallback,
+                        onCancelClick = hardwareWalletSignViewModel::resetHardwareWalletState,
+                        text = "Confirm by tapping Hito Wallet"
+                    )
+                }
+
+                is SendTransactionHardwareState.ScanToTransmit -> {
                     HardwareWalletScanButtons(
-                        onTryAgainClick = { scanToTransmit = false },
+                        onTryAgainClick = hardwareWalletSignViewModel::resetHardwareWalletState,
                         onContinueClick = {
                             val intent = QRScannerActivity.getScanQrIntent(context, showPasteButton = false)
                             launcher.launch(intent)
                         }
                     )
                 }
+                is SendTransactionHardwareState.Error -> {
+                    ButtonPrimaryYellow(
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        title = stringResource(R.string.Button_TryAgain),
+                        onClick = hardwareWalletSignViewModel::resetHardwareWalletState
+                    )
+                }
+                null -> {
+                    ButtonPrimaryYellow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 16.dp),
+                        title = stringResource(R.string.Send_Confirmation_Send_Button),
+                        onClick = {
+                            logger.info("click send button")
+
+                            coroutineScope.launch {
+                                buttonEnabled = false
+                                HudHelper.showInProcessMessage(view, R.string.Send_Sending, SnackbarDuration.INDEFINITE)
+
+                                try {
+                                    logger.info("sending tx")
+                                    viewModel.send()
+                                    logger.info("success")
+                                    stat(page = StatPage.SendConfirmation, event = StatEvent.Send)
+
+                                    HudHelper.showSuccessMessage(view, R.string.Hud_Text_Done)
+                                    delay(1200)
+
+                                    navController.popBackStack(input.sendEntryPointDestId, true)
+                                } catch (t: Throwable) {
+                                    logger.warning("failed", t)
+                                    HudHelper.showErrorMessage(view, t.javaClass.simpleName)
+                                }
+
+                                buttonEnabled = true
+                            }
+                        },
+                        enabled = uiState.sendEnabled && buttonEnabled
+                    )
+                }
+                else -> {}
             }
+
+//            if (!viewModel.isHardwareSigner) {
+//            } else {
+//                if (!scanToTransmit) {
+//                    if (nfcWritingStarted) {
+//                        val messageText = if (messageHex != null) {
+//                            "evm.msg:$ownAddress:$messageHex"
+//                        } else {
+//                            "evm.sign:$ownAddress:$txData"
+//                        }
+//                        val nfcCallback = NFCCallback(
+//                            type = NFCCallbackType.ETH_SEND,
+//                            messageText = messageText
+//                        )
+//                        StartNFCWriting(
+//                            nfcHandler,
+//                            nfcCallback,
+//                            onCancelClick = {
+//                                hardwareWalletSignViewModel.resetHardwareWalletState()
+//                            },
+//                            text =
+//                                "Confirm by tapping Hito Wallet"
+//                        )
+//                    } else {
+//                        ButtonPrimaryYellow(
+//                            modifier = Modifier.fillMaxWidth(),
+//                            title = stringResource(R.string.Send_Confirmation_Send_Button),
+//                            onClick = {
+//                                hardwareWalletSignViewModel.loadUnsigned()
+//                            }
+//                        )
+//                    }
+//                } else if (!isTxLoaded) {
+//                    HardwareWalletScanButtons(
+//                        onTryAgainClick = {
+//                            hardwareWalletSignViewModel.resetHardwareWalletState()
+//                        },
+//                        onContinueClick = {
+//                            val intent = QRScannerActivity.getScanQrIntent(context, showPasteButton = false)
+//                            launcher.launch(intent)
+//                        }
+//                    )
+//                } else {
+//                    CircularProgressIndicator(
+//                        modifier = Modifier
+//                            .size(112.dp)
+//                            .padding(top = 64.dp, bottom = 8.dp),
+//                        color = ComposeAppTheme.colors.grey
+//                    )
+//                }
+//            }
         }
     ) {
         SendEvmTransactionView(
@@ -330,8 +356,7 @@ private fun SendEvmConfirmationScreen(
             uiState.transactionFields,
             uiState.networkFee,
             StatPage.SendConfirmation,
-            input.isHardwareSigner,
-            scanToTransmit,
+            unsignedTxState
         )
     }
 }
