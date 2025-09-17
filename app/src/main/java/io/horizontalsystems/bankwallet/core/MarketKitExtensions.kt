@@ -142,6 +142,7 @@ val TokenQuery.isSupported: Boolean
         BlockchainType.Gnosis,
         BlockchainType.Fantom,
         BlockchainType.NexusTestnetIII,
+        BlockchainType.WorldChain,
         BlockchainType.Avalanche -> {
             tokenType is TokenType.Native || tokenType is TokenType.Eip20
         }
@@ -174,6 +175,7 @@ val Blockchain.description: String
         BlockchainType.Avalanche -> "AVAX, ERC20 tokens"
         BlockchainType.Optimism -> "L2 chain"
         BlockchainType.Base -> "L2 chain"
+        BlockchainType.WorldChain -> "L2 chain"
         BlockchainType.ZkSync -> "L2 chain"
         BlockchainType.ArbitrumOne -> "L2 chain"
         BlockchainType.Solana -> "SOL, SPL tokens"
@@ -194,6 +196,7 @@ fun Blockchain.assetUrl(code: String, issuer: String) = "https://stellarchain.io
 val BlockchainType.imageUrl: String
     get() = when (uid) {
         "nexus-testnet-iii" -> "https://cdn.jsdelivr.net/gh/4acha4a/nexus-testnet-iii-blockchain-icon@v1/blockchains/32px/nexus_testnet_iii@3x.png"
+        "worldchain" -> "https://cdn.blocksdecoded.com/blockchain-icons/32px/world-chain@3x.png"
         else -> "https://cdn.blocksdecoded.com/blockchain-icons/32px/$uid@3x.png"
     }
 
@@ -227,6 +230,7 @@ private val blockchainOrderMap: Map<BlockchainType, Int> by lazy {
         BlockchainType.Fantom,
         BlockchainType.ECash,
         BlockchainType.NexusTestnetIII,
+        BlockchainType.WorldChain,
     ).forEachIndexed { index, blockchainType ->
         map[blockchainType] = index
     }
@@ -252,6 +256,7 @@ val BlockchainType.tokenIconPlaceholder: Int
         BlockchainType.Ton -> R.drawable.the_open_network_jetton
         BlockchainType.Stellar -> R.drawable.stellar_asset
         BlockchainType.NexusTestnetIII -> R.drawable.ic_nexus_testnet_iii_centered_32dp
+        BlockchainType.WorldChain -> R.drawable.ic_nexus_testnet_iii_centered_32dp // TODO change when icon available
         else -> R.drawable.coin_placeholder
     }
 
@@ -275,6 +280,7 @@ val BlockchainType.title: String
     BlockchainType.Gnosis -> "Gnosis"
     BlockchainType.Fantom -> "Fantom"
     BlockchainType.NexusTestnetIII -> "Nexus Testnet III"
+    BlockchainType.WorldChain -> "World Chain"
     BlockchainType.Tron -> "Tron"
     BlockchainType.Ton -> "Ton"
     BlockchainType.Stellar -> "Stellar"
@@ -302,6 +308,7 @@ val BlockchainType.brandColor: Color?
         BlockchainType.ZkSync -> Color(0xFF8D8FF0)
         BlockchainType.ArbitrumOne -> Color(0xFF96BEDC)
         BlockchainType.NexusTestnetIII -> Color(0xFF6B7196)
+        BlockchainType.WorldChain -> Color(0xFF6B7196) // TODO change when branding available
         else -> null
     }
 
@@ -354,6 +361,7 @@ fun BlockchainType.supports(accountType: AccountType): Boolean {
                     || this == BlockchainType.Gnosis
                     || this == BlockchainType.Fantom
                     || this == BlockchainType.NexusTestnetIII
+                    || this == BlockchainType.WorldChain
         is AccountType.EvmPrivateKey -> {
             this == BlockchainType.Ethereum
                     || this == BlockchainType.BinanceSmartChain
@@ -599,6 +607,7 @@ val BlockchainType.Companion.supported: List<BlockchainType>
         BlockchainType.BinanceSmartChain,
         BlockchainType.Polygon,
         BlockchainType.NexusTestnetIII,
+        BlockchainType.WorldChain,
         BlockchainType.Avalanche,
         BlockchainType.Optimism,
         BlockchainType.Base,

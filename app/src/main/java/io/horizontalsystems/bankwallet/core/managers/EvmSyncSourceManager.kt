@@ -40,7 +40,8 @@ class EvmSyncSourceManager(
             BlockchainType.Fantom -> TransactionSource.fantom(appConfigProvider.ftmscanApiKey)
             BlockchainType.Base -> TransactionSource.basescan(appConfigProvider.basescanApiKey)
             BlockchainType.ZkSync -> TransactionSource.eraZkSync(appConfigProvider.eraZkSyncApiKey)
-            BlockchainType.NexusTestnetIII -> TransactionSource.nexus(appConfigProvider.etherscanApiKey) // TODO: Nexus API key
+            BlockchainType.NexusTestnetIII -> TransactionSource.nexus(appConfigProvider.etherscanApiKey)
+            BlockchainType.WorldChain -> TransactionSource.worldchain(appConfigProvider.etherscanApiKey)
             else -> throw Exception("Non-supported EVM blockchain")
         }
     }
@@ -217,6 +218,15 @@ class EvmSyncSourceManager(
                     blockchainType,
                     "Nexus",
                     RpcSource.Http(listOf(URI("https://testnet3.rpc.nexus.xyz")), null),
+                    defaultTransactionSource(blockchainType)
+                )
+            )
+
+            BlockchainType.WorldChain -> listOf(
+                evmSyncSource(
+                    blockchainType,
+                    "World Chain",
+                    RpcSource.Http(listOf(URI("https://worldchain-mainnet.g.alchemy.com/public")), null),
                     defaultTransactionSource(blockchainType)
                 )
             )

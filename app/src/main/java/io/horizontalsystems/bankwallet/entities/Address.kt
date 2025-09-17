@@ -46,6 +46,7 @@ val BitcoinAddress.tokenType: TokenType
         BlockchainType.BinanceSmartChain,
         BlockchainType.Polygon,
         BlockchainType.NexusTestnetIII,
+        BlockchainType.WorldChain,
         BlockchainType.Avalanche,
         BlockchainType.Optimism,
         BlockchainType.Base,

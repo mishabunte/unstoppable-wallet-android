@@ -15,6 +15,7 @@ object SendTransactionServiceFactory {
             BlockchainType.Base,
             BlockchainType.ZkSync,
             BlockchainType.NexusTestnetIII,
+            BlockchainType.WorldChain,
             BlockchainType.ArbitrumOne,
             BlockchainType.Gnosis,
             BlockchainType.Fantom,

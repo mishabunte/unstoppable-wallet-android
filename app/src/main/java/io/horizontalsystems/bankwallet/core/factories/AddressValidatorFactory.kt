@@ -38,6 +38,7 @@ object AddressValidatorFactory {
             BlockchainType.Gnosis,
             BlockchainType.Fantom,
             BlockchainType.NexusTestnetIII,
+            BlockchainType.WorldChain,
             BlockchainType.ArbitrumOne -> {
                 EvmAddressValidator()
             }

@@ -737,6 +737,7 @@ private fun openTransactionOptionsModule(
         BlockchainType.Base,
         BlockchainType.ZkSync,
         BlockchainType.NexusTestnetIII,
+        BlockchainType.WorldChain,
         BlockchainType.ArbitrumOne -> {
             navController.slideFromRight(
                 R.id.transactionSpeedUpCancelFragment,

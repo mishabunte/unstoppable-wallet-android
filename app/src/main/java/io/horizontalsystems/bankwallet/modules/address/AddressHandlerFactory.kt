@@ -60,6 +60,7 @@ class AddressHandlerFactory(
             BlockchainType.Gnosis,
             BlockchainType.Fantom,
             BlockchainType.NexusTestnetIII,
+            BlockchainType.WorldChain,
             BlockchainType.ArbitrumOne -> {
                 addressHandlers.add(AddressHandlerEvm(blockchainType))
             }

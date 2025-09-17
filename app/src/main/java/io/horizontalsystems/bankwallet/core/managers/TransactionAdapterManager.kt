@@ -60,6 +60,7 @@ class TransactionAdapterManager(
                     BlockchainType.Gnosis,
                     BlockchainType.Fantom,
                     BlockchainType.NexusTestnetIII,
+                    BlockchainType.WorldChain,
                     BlockchainType.ArbitrumOne -> {
                         adapterFactory.evmTransactionsAdapter(wallet.transactionSource, blockchainType)
                     }

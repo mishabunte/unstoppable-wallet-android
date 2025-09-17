@@ -85,6 +85,7 @@ class TransactionRecordRepository(
                 BlockchainType.Solana,
                 BlockchainType.Tron,
                 BlockchainType.NexusTestnetIII,
+                BlockchainType.WorldChain,
                 BlockchainType.Stellar,
                 BlockchainType.Ton -> {
                     if (mergedWallets.none { it.source == wallet.source }) {

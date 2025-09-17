@@ -104,6 +104,7 @@ class BalanceViewItemFactory {
         BlockchainType.Base,
         BlockchainType.ZkSync,
         BlockchainType.NexusTestnetIII,
+        BlockchainType.WorldChain,
         BlockchainType.Solana,
         BlockchainType.Gnosis,
         BlockchainType.Fantom,
