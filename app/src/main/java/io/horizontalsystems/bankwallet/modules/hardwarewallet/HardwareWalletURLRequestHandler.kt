@@ -38,9 +38,7 @@ class HardwareWalletURLRequestHandler {
     }
 
     suspend fun createAuthPayload(): String? {
-        Log.d("HitoAuth", "Creating auth payload")
         val token = requestAuthToken() ?: return null
-        Log.d("HitoAuth", "Received token: $token")
         val ts = Instant.now().epochSecond
         val roundedTs = (ts - (ts % 600)).toString()
         return "hito.auth:$roundedTs.${token}"
