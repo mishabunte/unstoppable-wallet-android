@@ -39,14 +39,14 @@ import io.horizontalsystems.bankwallet.core.BaseComposeFragment
 import io.horizontalsystems.bankwallet.core.slideFromBottom
 import io.horizontalsystems.bankwallet.core.slideFromRight
 import io.horizontalsystems.bankwallet.core.utils.ModuleField
-import io.horizontalsystems.bankwallet.modules.hardwarewallet.DottedList
-import io.horizontalsystems.bankwallet.modules.hardwarewallet.HardwareWalletScanButtons
 import io.horizontalsystems.bankwallet.modules.hardwarewallet.TokenCheckResponse
+import io.horizontalsystems.bankwallet.modules.hardwarewallet.scanui.HardwareWalletScanButtons
 import io.horizontalsystems.bankwallet.modules.qrscanner.QRScannerActivity
 import io.horizontalsystems.bankwallet.ui.compose.ComposeAppTheme
 import io.horizontalsystems.bankwallet.ui.compose.components.AppBar
 import io.horizontalsystems.bankwallet.ui.compose.components.ButtonPrimaryTransparent
 import io.horizontalsystems.bankwallet.ui.compose.components.ButtonPrimaryYellowWithIcon
+import io.horizontalsystems.bankwallet.ui.compose.components.DottedList
 import io.horizontalsystems.bankwallet.ui.compose.components.HsBackButton
 
 class HardwareWalletAuthenticationScanFragment : BaseComposeFragment() {
