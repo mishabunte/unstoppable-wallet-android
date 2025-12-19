@@ -5,6 +5,7 @@ import io.horizontalsystems.bankwallet.core.BalanceData
 import io.horizontalsystems.bankwallet.core.ISendStellarAdapter
 import io.horizontalsystems.bankwallet.core.managers.StellarKitWrapper
 import io.horizontalsystems.bankwallet.core.managers.toAdapterState
+import io.horizontalsystems.core.toHexString
 import io.horizontalsystems.stellarkit.StellarKit
 import io.horizontalsystems.stellarkit.room.StellarAsset
 import io.reactivex.BackpressureStrategy
@@ -17,7 +18,7 @@ import kotlinx.coroutines.launch
 import java.math.BigDecimal
 
 class StellarAdapter(
-    stellarKitWrapper: StellarKitWrapper
+    private val stellarKitWrapper: StellarKitWrapper
 ) : BaseStellarAdapter(stellarKitWrapper), ISendStellarAdapter {
     private val coroutineScope = CoroutineScope(Dispatchers.Default)
 
@@ -63,6 +64,14 @@ class StellarAdapter(
         }
     }
 
+    override fun isHardwareAccount(): Boolean {
+        return stellarKitWrapper.isHardwareAccount == true
+    }
+
+    override suspend fun getUnsignedTransaction(assetId: String?, destination: String, amount: BigDecimal, memo: String?): String {
+        return stellarKitWrapper.createUnsignedTransactionHex(assetId, destination, amount, memo)
+    }
+
     override fun stop() {
         coroutineScope.cancel()
     }
@@ -94,7 +103,15 @@ class StellarAdapter(
         }
     }
 
+    override suspend fun sendRawTransaction(xdrBase64: String) {
+        stellarKit.sendRawTransaction(xdrBase64)
+    }
+
     override fun validate(address: String) {
         StellarKit.validateAddress(address)
+    }
+
+    override fun getNetworkPassphrase(): String {
+        return stellarKitWrapper.getNetworkPassphrase()
     }
 }

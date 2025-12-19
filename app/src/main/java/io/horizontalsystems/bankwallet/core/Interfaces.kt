@@ -415,9 +415,13 @@ interface ISendTonAdapter {
 interface ISendStellarAdapter {
     val maxSendableBalance: BigDecimal
     val fee: BigDecimal
+    fun isHardwareAccount(): Boolean
+    suspend fun getUnsignedTransaction(assetId: String?, destination: String, amount: BigDecimal, memo: String?): String
     fun validate(address: String)
+    fun getNetworkPassphrase(): String
     suspend fun getMinimumSendAmount(address: String) : BigDecimal?
     suspend fun send(amount: BigDecimal, address: String, memo: String?)
+    suspend fun sendRawTransaction(xdrBase64: String)
 }
 
 interface ISendTronAdapter {

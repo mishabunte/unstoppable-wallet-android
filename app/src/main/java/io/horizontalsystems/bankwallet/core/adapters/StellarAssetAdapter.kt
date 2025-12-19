@@ -18,7 +18,7 @@ import kotlinx.coroutines.withContext
 import java.math.BigDecimal
 
 class StellarAssetAdapter(
-    stellarKitWrapper: StellarKitWrapper,
+    private val stellarKitWrapper: StellarKitWrapper,
     code: String,
     issuer: String
 ) : BaseStellarAdapter(stellarKitWrapper), ISendStellarAdapter {
@@ -69,10 +69,26 @@ class StellarAssetAdapter(
     override val fee: BigDecimal
         get() = stellarKit.sendFee
 
+    override fun isHardwareAccount(): Boolean {
+        return stellarKitWrapper.isHardwareAccount == true
+    }
+
+    override suspend fun getUnsignedTransaction(assetId: String?, destination: String, amount: BigDecimal, memo: String?): String {
+        return stellarKitWrapper.createUnsignedTransactionHex(assetId, destination, amount, memo)
+    }
+
     override val maxSendableBalance: BigDecimal
         get() = balance
 
     override suspend fun getMinimumSendAmount(address: String) = null
+
+    override suspend fun sendRawTransaction(xdrBase64: String) {
+        stellarKit.sendRawTransaction(xdrBase64)
+    }
+
+    override fun getNetworkPassphrase(): String {
+        return stellarKitWrapper.getNetworkPassphrase()
+    }
 
     override suspend fun send(amount: BigDecimal, address: String, memo: String?) {
         stellarKit.sendAsset(stellarAsset.id, address, amount, memo)

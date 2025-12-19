@@ -142,7 +142,7 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             resValue "string", "twitterBearerToken", "AAAAAAAAAAAAAAAAAAAAAJgeNwEAAAAA6xVpR6xLKTrxIA3kkSyRA92LDpA%3Da6auybDwcymUyh2BcS6zZwicUdxGtrzJC0qvOSdRwKLeqBGhwB"
             resValue "string", "uniswapGraphUrl", "https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v2"
-            resValue "string", "etherscanKey", "IEXTB9RE7MUV2UQ9X238RP146IEJB1J5HS,27S4V3GYJGMCPWQZ2T4SF9355QBQYQ3FI7,YK4KEA3TANM8KZ5J6E2Q1ZIM6YDM8TEABM"
+            resValue "string", "etherscanKey", "DNT17NYSZH1JTEEHNX41KVMAKA5PVCK1K2"
             resValue "string", "bscscanKey", "HRV1ET55UFXJQMQ3HUBC1JT8XT3ZT2QU6M,IE9KAXM6Q8KKK1VAZQCPP2H8Q9DSCXH4NM,ITVTJ6PB99DMHIQWSM4TKPWNYGVGVIIDHS"
             resValue "string", "polygonscanKey", "P9QEQHXSYFKM9KHR2TH8BGRAQU6T3M7UA4,DMGHPTPSZCE4V4SYMWTIK29CC1RIDTN7U9"
             resValue "string", "snowtraceApiKey", "47IXTRAAFT1E1J4RNSPZPNB5EWUIQR16FG"
@@ -372,12 +372,12 @@ dependencies {
     debugImplementation leakCanary
 
     // Wallet kits
-    implementation 'com.github.horizontalsystems:stellar-kit-android:c27e3a5'
+    implementation 'com.github.4acha4a:stellar-kit-android:4f461ef'
     implementation 'com.github.horizontalsystems:ton-kit-android:dcddd90'
     implementation 'com.github.horizontalsystems:bitcoin-kit-android:7826bf5'
-    implementation 'com.github.4acha4a:ethereum-kit-android:5e5059d'
+    implementation 'com.github.4acha4a:ethereum-kit-android:e686f49'
     implementation 'com.github.horizontalsystems:blockchain-fee-rate-kit-android:1d3bd49'
-    implementation 'com.github.4acha4a:market-kit-android:8f30923'
+    implementation 'com.github.4acha4a:market-kit-android:a81e1fe'
     implementation 'com.github.4acha4a:solana-kit-android:3560475'
     implementation 'com.github.horizontalsystems:tron-kit-android:bdd7602'
     // Zcash SDK

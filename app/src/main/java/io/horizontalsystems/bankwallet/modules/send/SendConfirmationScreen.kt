@@ -302,12 +302,16 @@ fun SendConfirmationScreen(
                     }
 
                     is SendTransactionHardwareState.NFCWritingStarted -> {
-                        val messageText = "solana.sign:0x${unsignedTxState.unsignedTxHex}"
-                        val nfcCallback = NFCCallback(type= NFCCallbackType.SOLANA_SEND, messageText=messageText)
+                        val payloadPrefix = when (blockchainType) {
+                            is BlockchainType.Solana -> "solana.sign:0x"
+                            is BlockchainType.Stellar -> "stellar.sign:"
+                            else -> ""
+                        }
+                        val nfcCallback = NFCCallback(type= NFCCallbackType.SOLANA_SEND, messageText=payloadPrefix + unsignedTxState.unsignedTxHex)
                         StartNFCWriting(nfcHandler,
                             nfcCallback,
                             onCancelClick = {
-                                onHardwareSignerCancel()
+                                onHardwareSignerNFCSuccess()
                             },
                             text = "Confirm by tapping Hito Wallet"
                         )

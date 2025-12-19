@@ -1,6 +1,8 @@
 package io.horizontalsystems.bankwallet.modules.send.stellar
 
+import android.util.Log
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -17,8 +19,11 @@ fun SendStellarConfirmationScreen(
     amountInputModeViewModel: AmountInputModeViewModel,
     sendEntryPointDestId: Int
 ) {
+    Log.d("Manager", "Initialized")
     var confirmationData by remember { mutableStateOf(sendViewModel.getConfirmationData()) }
     var refresh by remember { mutableStateOf(false) }
+
+    val unsignedTxState by sendViewModel.unsignedTxState.collectAsState()
 
     LifecycleResumeEffect(Unit) {
         if (refresh) {
@@ -49,6 +54,15 @@ fun SendStellarConfirmationScreen(
         memo = confirmationData.memo,
         rbfEnabled = confirmationData.rbfEnabled,
         onClickSend = sendViewModel::onClickSend,
-        sendEntryPointDestId = sendEntryPointDestId
+        sendEntryPointDestId = sendEntryPointDestId,
+        onScannedQR = sendViewModel::onScannedQR,
+        unsignedTxState = unsignedTxState,
+        onHardwareSignerSendClick = {
+            sendViewModel.getUnsignedTransaction(
+                amount = confirmationData.amount,
+            )
+        },
+        onHardwareSignerNFCSuccess = sendViewModel::onNFCWritingSuccess,
+        onHardwareSignerCancel = sendViewModel::resetHardwareWalletState
     )
 }
