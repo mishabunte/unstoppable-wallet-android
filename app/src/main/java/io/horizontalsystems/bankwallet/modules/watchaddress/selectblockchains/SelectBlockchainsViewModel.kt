@@ -41,6 +41,7 @@ class SelectBlockchainsViewModel(
             is AccountType.EvmPrivateKey,
             is AccountType.SolanaAddress,
             is AccountType.SolanaAddressHardware,
+            is AccountType.StellarAddressHardware,
             is AccountType.TronAddress,
             is AccountType.StellarSecretKey -> Unit // N/A
             is AccountType.TronAddressHardware -> Unit // N/A

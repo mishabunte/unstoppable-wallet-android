@@ -1,5 +1,6 @@
 package io.horizontalsystems.bankwallet.modules.hardwarewallet
 
+import android.util.Log
 import io.horizontalsystems.bankwallet.core.IAccountFactory
 import io.horizontalsystems.bankwallet.core.IAccountManager
 import io.horizontalsystems.bankwallet.core.managers.EvmBlockchainManager
@@ -33,6 +34,14 @@ class HardwareWalletService(
                 is AccountType.SolanaAddress, is AccountType.SolanaAddressHardware -> {
                     if (BlockchainType.Solana.supports(accountType)) {
                         add(TokenQuery(BlockchainType.Solana, TokenType.Native))
+                    }
+                }
+
+                is AccountType.StellarAddress, is AccountType.StellarAddressHardware -> {
+                    Log.d("HardwareWalletService", "tokens: Adding Stellar token for account type $accountType")
+                    if (BlockchainType.Stellar.supports(accountType)) {
+                        Log.d("HardwareWalletService", "tokens: Stellar supported for account type $accountType")
+                        add(TokenQuery(BlockchainType.Stellar, TokenType.Native))
                     }
                 }
 
@@ -105,6 +114,7 @@ class HardwareWalletService(
                     }
                 }
                 else -> {
+                    Log.d("HardwareWalletService", "tokens: Unsupported account type $accountType")
                     // Unsupported account type
                 }
             }
@@ -124,9 +134,12 @@ class HardwareWalletService(
 
         accountManager.save(account)
 
+        Log.d("HardwareWalletService", "tokens: Activating ${tokens.size} tokens for hardware wallet account. Token list: ${tokens}")
+
         try {
             walletActivator.activateTokens(account, tokens)
         } catch (e: Exception) {
+            Log.e("HardwareWalletService", "hardwareTokens: Failed to activate tokens for hardware wallet account", e)
         }
     }
 }

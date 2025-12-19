@@ -23,6 +23,7 @@ object BackupLocalModule {
     private const val SOLANA_ADDRESS_HARDWARE = "solana_address_hardware"
     private const val TRON_ADDRESS_HARDWARE = "tron_address_hardware"
     private const val HD_EXTENDED_LEY_HARDWARE = "hd_extended_key_hardware"
+    private const val STELLAR_ADDRESS_HARDWARE = "stellar_address_hardware"
     private const val CEX = "cex"
 
     //Backup Json file data structure
@@ -85,6 +86,7 @@ object BackupLocalModule {
         is AccountType.BitcoinAddress -> BITCOIN_ADDRESS
         is AccountType.HdExtendedKey -> HD_EXTENDED_LEY
         is AccountType.EvmAddressHardware -> ADDRESS_HARDWARE
+        is AccountType.StellarAddressHardware -> STELLAR_ADDRESS_HARDWARE
         is AccountType.SolanaAddressHardware -> SOLANA_ADDRESS_HARDWARE
         is AccountType.TronAddressHardware -> TRON_ADDRESS_HARDWARE
         is AccountType.HdExtendedKeyHardware -> HD_EXTENDED_LEY_HARDWARE
@@ -111,6 +113,7 @@ object BackupLocalModule {
             TRON_ADDRESS -> AccountType.TronAddress(String(data, Charsets.UTF_8))
             TON_ADDRESS -> AccountType.TonAddress(String(data, Charsets.UTF_8))
             STELLAR_ADDRESS -> AccountType.StellarAddress(String(data, Charsets.UTF_8))
+            STELLAR_ADDRESS_HARDWARE -> AccountType.StellarAddressHardware(String(data, Charsets.UTF_8))
             BITCOIN_ADDRESS -> AccountType.BitcoinAddress.fromSerialized(String(data, Charsets.UTF_8))
             HD_EXTENDED_LEY -> AccountType.HdExtendedKey(Base58.encode(data))
             ADDRESS_HARDWARE -> AccountType.EvmAddressHardware(String(data, Charsets.UTF_8))
@@ -148,6 +151,7 @@ object BackupLocalModule {
         is AccountType.TronAddress -> accountType.address.toByteArray(Charsets.UTF_8)
         is AccountType.TonAddress -> accountType.address.toByteArray(Charsets.UTF_8)
         is AccountType.StellarAddress -> accountType.address.toByteArray(Charsets.UTF_8)
+        is AccountType.StellarAddressHardware -> accountType.address.toByteArray(Charsets.UTF_8)
         is AccountType.BitcoinAddress -> accountType.serialized.toByteArray(Charsets.UTF_8)
         is AccountType.HdExtendedKey -> Base58.decode(accountType.keySerialized)
         is AccountType.EvmAddressHardware -> accountType.address.toByteArray(Charsets.UTF_8)

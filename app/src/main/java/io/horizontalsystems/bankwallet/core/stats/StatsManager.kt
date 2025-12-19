@@ -282,6 +282,9 @@ val AccountType.statAccountType: String
         is AccountType.SolanaAddressHardware -> {
             "sol_address_hardware"
         }
+        is AccountType.StellarAddressHardware -> {
+            "stellar_address_hardware"
+        }
 
         is AccountType.TronAddressHardware -> {
             "tron_address_hardware"

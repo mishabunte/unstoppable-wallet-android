@@ -43,6 +43,7 @@ data class Account(
         get() = when (this.type) {
             is AccountType.EvmAddressHardware -> true
             is AccountType.SolanaAddressHardware -> true
+            is AccountType.StellarAddressHardware -> true
             is AccountType.TronAddressHardware -> true
             is AccountType.HdExtendedKeyHardware -> this.type.hdExtendedKey.isPublic
             else -> false
@@ -150,6 +151,9 @@ sealed class AccountType : Parcelable {
 
     @Parcelize
     data class SolanaAddressHardware(val address: String) : AccountType()
+
+    @Parcelize
+    data class StellarAddressHardware(val address: String) : AccountType()
 
     @Parcelize
     data class TronAddressHardware(val address: String): AccountType()
@@ -331,6 +335,7 @@ sealed class AccountType : Parcelable {
             }
             is EvmAddressHardware -> "EVM Address Hardware"
             is SolanaAddressHardware -> "Solana Address Hardware"
+            is StellarAddressHardware -> "Stellar Address Hardware"
             is TronAddressHardware -> "Tron Address Hardware"
             is HdExtendedKeyHardware -> {
                 when (this.hdExtendedKey.derivedType) {
@@ -369,6 +374,7 @@ sealed class AccountType : Parcelable {
             is TronAddress -> this.address.shorten()
             is EvmAddressHardware -> this.address.shorten()
             is SolanaAddressHardware -> this.address.shorten()
+            is StellarAddressHardware -> this.address.shorten()
             is TronAddressHardware -> this.address.shorten()
             is TonAddress -> this.address.shorten()
             is StellarAddress -> this.address.shorten()
@@ -410,6 +416,13 @@ sealed class AccountType : Parcelable {
         is Mnemonic -> io.horizontalsystems.solanakit.Signer.address(seed)
         is SolanaAddress -> address
         is SolanaAddressHardware -> address
+        else -> null
+    }
+
+    fun stellarAddress() = when (this) {
+        //is Mnemonic -> io.horizontalsystems.stellarkit.StellarWallet
+        is StellarAddress -> address
+        is StellarAddressHardware -> address
         else -> null
     }
 

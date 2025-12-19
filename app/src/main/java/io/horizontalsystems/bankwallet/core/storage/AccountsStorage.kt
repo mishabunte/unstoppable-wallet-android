@@ -29,6 +29,7 @@ class AccountsStorage(appDatabase: AppDatabase) : IAccountsStorage {
         private const val ADDRESS_HARDWARE = "address_hardware"
         private const val SOLANA_ADDRESS_HARDWARE = "solana_address_hardware"
         private const val TRON_ADDRESS_HARDWARE = "tron_address_hardware"
+        private const val STELLAR_ADDRESS_HARDWARE = "stellar_address_hardware"
         private const val HD_EXTENDED_LEY_HARDWARE = "hd_extended_key_hardware"
         private const val CEX = "cex"
     }
@@ -61,6 +62,7 @@ class AccountsStorage(appDatabase: AppDatabase) : IAccountsStorage {
                             TRON_ADDRESS -> AccountType.TronAddress(record.key!!.value)
                             TON_ADDRESS -> AccountType.TonAddress(record.key!!.value)
                             STELLAR_ADDRESS -> AccountType.StellarAddress(record.key!!.value)
+                            STELLAR_ADDRESS_HARDWARE -> AccountType.StellarAddressHardware(record.key!!.value)
                             BITCOIN_ADDRESS -> AccountType.BitcoinAddress.fromSerialized(record.key!!.value)
                             HD_EXTENDED_LEY -> AccountType.HdExtendedKey(record.key!!.value)
                             ADDRESS_HARDWARE -> AccountType.EvmAddressHardware(record.key!!.value)
@@ -180,6 +182,10 @@ class AccountsStorage(appDatabase: AppDatabase) : IAccountsStorage {
             is AccountType.SolanaAddressHardware -> {
                 key = SecretString(account.type.address)
                 accountType = SOLANA_ADDRESS_HARDWARE
+            }
+            is AccountType.StellarAddressHardware -> {
+                key = SecretString(account.type.address)
+                accountType = STELLAR_ADDRESS_HARDWARE
             }
             is AccountType.TronAddressHardware -> {
                 key = SecretString(account.type.address)

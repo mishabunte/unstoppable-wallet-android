@@ -61,7 +61,7 @@ class WatchAddressService(
                     }
                 }
 
-                is AccountType.StellarAddress -> {
+                is AccountType.StellarAddress, is AccountType.StellarAddressHardware -> {
                     if (BlockchainType.Stellar.supports(accountType)) {
                         add(TokenQuery(BlockchainType.Stellar, TokenType.Native))
                     }

@@ -125,6 +125,7 @@ class HardwareWalletViewModel(
     private fun syncSubmitButtonType() {
         submitButtonType = when (type) {
             Type.EvmAddressHardware    -> SubmitButtonType.Next(address != null)
+            Type.StellarAddressHardware -> SubmitButtonType.Next(address != null)
             //Type.XPubKeyHardware       -> SubmitButtonType.Next(xPubKey != null)
             Type.SolanaAddressHardware -> SubmitButtonType.Next(address != null)
             //Type.TronAddressHardware   -> SubmitButtonType.Done(address != null)
@@ -134,12 +135,14 @@ class HardwareWalletViewModel(
     private fun getAccountType() = when (type) {
         Type.EvmAddressHardware    -> address?.let { AccountType.EvmAddressHardware(it.hex) }
         Type.SolanaAddressHardware -> address?.let { AccountType.SolanaAddressHardware(it.hex) }
+        Type.StellarAddressHardware -> address?.let { AccountType.StellarAddressHardware(it.hex) }
         //Type.TronAddressHardware   -> address?.let { AccountType.TronAddressHardware(it.hex)}
         //Type.XPubKeyHardware       -> xPubKey?.let { AccountType.HdExtendedKeyHardware(it) }
     }
 
     enum class Type(val titleResId: Int, val subtitleResId: Int) {
         EvmAddressHardware(R.string.Hardware_LinkBy_TypeEvmAddress, R.string.Hardware_LinkBy_TypeEvmAddress_Subtitle),
+        StellarAddressHardware(R.string.Hardware_LinkBy_TypeStellarAddress, R.string.Hardware_LinkBy_TypeStellarAddress_Subtitle),
         //TronAddressHardware(R.string.Watch_TypeTronAddress, R.string.Watch_TypeTronAddress_Subtitle),
         SolanaAddressHardware(R.string.Hardware_LinkBy_TypeSolanaAddress, R.string.Hardware_LinkBy_TypeSolanaAddress_Subtitle),
         //XPubKeyHardware(R.string.Watch_TypeXPubKey, R.string.Watch_TypeXPubKey_Subtitle),

@@ -383,7 +383,7 @@ fun BlockchainType.supports(accountType: AccountType): Boolean {
         is AccountType.TonAddress ->
             this == BlockchainType.Ton
 
-        is AccountType.StellarAddress ->
+        is AccountType.StellarAddress, is AccountType.StellarAddressHardware ->
             this == BlockchainType.Stellar
 
         is AccountType.StellarSecretKey ->
@@ -486,7 +486,7 @@ fun FullCoin.eligibleTokens(accountType: AccountType): List<Token> {
 }
 
 val HsPointTimePeriod.title: Int
-    get() = when(this){
+    get() = when (this) {
         HsPointTimePeriod.Minute30 -> R.string.Coin_Analytics_Period_30m
         HsPointTimePeriod.Hour1 -> R.string.Coin_Analytics_Period_1h
         HsPointTimePeriod.Hour4 -> R.string.Coin_Analytics_Period_4h
