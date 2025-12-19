@@ -52,7 +52,7 @@ class StellarTransactionsAdapter(
         val beforeId = (from as StellarTransactionRecord?)?.operation?.id
 
         rxSingle {
-            stellarKit.operations(tagQuery, beforeId = beforeId, limit = limit)
+            stellarKit.operationsBefore(tagQuery, beforeId, limit)
                 .map {
                     transactionConverter.convert(it)
                 }
@@ -111,6 +111,10 @@ class StellarTransactionsAdapter(
     }
 
     override fun getTransactionUrl(transactionHash: String): String {
-        return "https://stellar.expert/explorer/public/tx/${transactionHash}"
+        return if (stellarKit.isMainNet) {
+            "https://stellar.expert/explorer/public/tx/${transactionHash}"
+        } else {
+            return "https://stellar.expert/explorer/testnet/tx/${transactionHash}"
+        }
     }
 }

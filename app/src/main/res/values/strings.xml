@@ -1303,11 +1303,13 @@
     <!-- Link Hardware Wallet -->
     <string name="Hardware_LinkBy">Link By</string>
     <string name="Hardware_LinkBy_TypeEvmAddress" translatable="false">EVM Address</string>
+    <string name="Hardware_LinkBy_TypeStellarAddress" translatable="false">Stellar Address</string>
     <string name="Hardware_LinkBy_TypeSolanaAddress" translatable="false">Solana Address</string>
     <string name="Hardware_LinkBy_TypeTronAddress" translatable="false">Tron Address</string>
     <string name="Hardware_LinkBy_TypeXPubKey" translatable="false">Account xPubKey</string>
     <string name="Hardware_LinkBy_TypeEvmAddress_Subtitle" translatable="false">(Ethereum, Binance, …)</string>
     <string name="Hardware_LinkBy_TypeSolanaAddress_Subtitle" translatable="false">(SOL, Solana tokens, …)</string>
+    <string name="Hardware_LinkBy_TypeStellarAddress_Subtitle" translatable="false">(XLM, Stellar tokens, …)</string>
     <string name="Hardware_LinkBy_TypeTronAddress_Subtitle" translatable="false">(TRX, Tron tokens, …)</string>
     <string name="Hardware_LinkBy_TypeXPubKey_Subtitle" translatable="false">(Bitcoin, Litecoin, …)</string>
 

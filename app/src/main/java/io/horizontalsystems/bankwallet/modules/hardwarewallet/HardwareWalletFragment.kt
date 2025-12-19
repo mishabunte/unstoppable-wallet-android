@@ -192,6 +192,15 @@ fun HardwareWalletScreen(navController: NavController, popUpToInclusiveId: Int, 
                             onValueChange = viewModel::onEnterAddress
                         )
                     }
+                    HardwareWalletViewModel.Type.StellarAddressHardware -> {
+                        HSAddressInput(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            tokenQuery = TokenQuery(BlockchainType.Stellar, TokenType.Native),
+                            coinCode = "XLM",
+                            navController = navController,
+                            onValueChange = viewModel::onEnterAddress
+                        )
+                    }
                     /*
                     HardwareWalletViewModel.Type.TronAddressHardware -> {
                         HSAddressInput(
@@ -226,7 +235,7 @@ fun HardwareWalletScreen(navController: NavController, popUpToInclusiveId: Int, 
 
 object HardwareWalletAddressTextPreprocessor : TextPreprocessor {
     override fun process(text: String): String {
-        return text.removePrefix("ethereum:").removePrefix("solana:")
+        return text.removePrefix("ethereum:").removePrefix("solana:").removePrefix("stellar:")
     }
 }
 
