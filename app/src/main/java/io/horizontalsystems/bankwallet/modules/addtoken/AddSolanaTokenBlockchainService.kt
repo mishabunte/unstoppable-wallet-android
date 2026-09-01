@@ -1,11 +1,6 @@
 package io.horizontalsystems.bankwallet.modules.addtoken
 
-import androidx.preference.PreferenceManager
-import io.horizontalsystems.bankwallet.core.App
-import io.horizontalsystems.bankwallet.core.App.Companion.preferences
 import io.horizontalsystems.bankwallet.core.customCoinUid
-import io.horizontalsystems.bankwallet.core.managers.LocalStorageManager
-import io.horizontalsystems.bankwallet.core.providers.AppConfigProvider
 import io.horizontalsystems.bankwallet.modules.addtoken.AddTokenModule.IAddTokenBlockchainService
 import io.horizontalsystems.marketkit.models.Blockchain
 import io.horizontalsystems.marketkit.models.Coin
@@ -14,7 +9,7 @@ import io.horizontalsystems.marketkit.models.TokenQuery
 import io.horizontalsystems.marketkit.models.TokenType
 import io.horizontalsystems.solanakit.core.TokenProvider
 import io.horizontalsystems.solanakit.models.Address
-import io.horizontalsystems.solanakit.transactions.SolanaFmService
+import io.horizontalsystems.solanakit.transactions.JupiterApiService
 
 class AddSolanaTokenBlockchainService(
     private val blockchain: Blockchain,
@@ -50,17 +45,8 @@ class AddSolanaTokenBlockchainService(
     }
 
     companion object {
-        fun getInstance(blockchain: Blockchain): AddSolanaTokenBlockchainService {
-            preferences = PreferenceManager.getDefaultSharedPreferences(App.instance)
-            val tokenProvider = TokenProvider(
-                SolanaFmService(
-                    AppConfigProvider(
-                        LocalStorageManager(
-                            preferences
-                        )
-                    ).solscanApiKey
-                )
-            )
+        fun getInstance(blockchain: Blockchain, jupiterApiKey: String): AddSolanaTokenBlockchainService {
+            val tokenProvider = TokenProvider(JupiterApiService(jupiterApiKey))
             return AddSolanaTokenBlockchainService(blockchain, tokenProvider)
         }
     }

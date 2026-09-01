@@ -116,7 +116,6 @@ class SolanaKitManager(
             addressString = address,
             rpcSource = rpcSourceManager.rpcSource,
             walletId = account.id,
-            solscanApiKey = appConfigProvider.solscanApiKey
         )
         return SolanaKitWrapper(kit, signer, isHardwareSigner, rpcSourceManager.rpcSource.url.toString())
     }
