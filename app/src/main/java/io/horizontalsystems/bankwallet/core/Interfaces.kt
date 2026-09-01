@@ -422,6 +422,7 @@ interface ISendStellarAdapter {
     val fee: BigDecimal
     fun isHardwareAccount(): Boolean
     suspend fun getUnsignedTransaction(assetId: String?, destination: String, amount: BigDecimal, memo: String?): String
+    suspend fun getChangeTrustAssetTransaction(assetId: String, memo: String?): String
     fun validate(address: String)
     fun getNetworkPassphrase(): String
     suspend fun getMinimumSendAmount(address: String) : BigDecimal?

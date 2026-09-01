@@ -72,6 +72,10 @@ class StellarAdapter(
         return stellarKitWrapper.createUnsignedTransactionHex(assetId, destination, amount, memo)
     }
 
+    override suspend fun getChangeTrustAssetTransaction(assetId: String, memo: String?): String {
+        return stellarKitWrapper.createChangeTrustAssetTransactionHex(assetId, memo)
+    }
+
     override fun stop() {
         coroutineScope.cancel()
     }

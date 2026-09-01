@@ -59,6 +59,10 @@ class StellarAssetAdapter(
         }
     }
 
+    override suspend fun getChangeTrustAssetTransaction(assetId: String, memo: String?): String {
+        return stellarKitWrapper.createChangeTrustAssetTransactionHex(assetId, memo)
+    }
+
     override fun stop() {
         coroutineScope.cancel()
     }
@@ -108,6 +112,10 @@ class StellarAssetAdapter(
 
     fun activate() {
         stellarKit.enableAsset(stellarAsset.id, null)
+    }
+
+    fun getStellarAssetId(): String {
+        return stellarAsset.id
     }
 
     fun validateActivation() {

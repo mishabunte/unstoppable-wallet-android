@@ -1,11 +1,19 @@
 package io.horizontalsystems.bankwallet.modules.activatetoken
 
+import android.app.Activity
 import android.os.Parcelable
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -13,6 +21,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -25,11 +34,24 @@ import io.horizontalsystems.bankwallet.core.badge
 import io.horizontalsystems.bankwallet.core.iconPlaceholder
 import io.horizontalsystems.bankwallet.core.imageUrl
 import io.horizontalsystems.bankwallet.core.setNavigationResultX
+import io.horizontalsystems.bankwallet.core.utils.ModuleField
 import io.horizontalsystems.bankwallet.entities.Wallet
 import io.horizontalsystems.bankwallet.modules.confirm.ConfirmTransactionScreen
+import io.horizontalsystems.bankwallet.modules.hardwarewallet.HardwareWalletNFCHandler
+import io.horizontalsystems.bankwallet.modules.hardwarewallet.NFCCallback
+import io.horizontalsystems.bankwallet.modules.hardwarewallet.NFCCallbackType
+import io.horizontalsystems.bankwallet.modules.hardwarewallet.SendTransactionHardwareState
+import io.horizontalsystems.bankwallet.modules.hardwarewallet.StartNFCWriting
+import io.horizontalsystems.bankwallet.modules.hardwarewallet.scanui.HardwareWalletScanButtons
+import io.horizontalsystems.bankwallet.modules.hardwarewallet.scanui.HardwareWalletSendCautions
 import io.horizontalsystems.bankwallet.modules.multiswap.ui.DataFieldFee
+import io.horizontalsystems.bankwallet.modules.qrscanner.QRScannerActivity
 import io.horizontalsystems.bankwallet.modules.receive.ActivateTokenError
 import io.horizontalsystems.bankwallet.modules.receive.ActivateTokenViewModel
+import io.horizontalsystems.bankwallet.modules.send.HardwareSendError
+import io.horizontalsystems.bankwallet.modules.send.HardwareSendSuccess
+import io.horizontalsystems.bankwallet.modules.send.SendButton
+import io.horizontalsystems.bankwallet.ui.compose.ComposeAppTheme
 import io.horizontalsystems.bankwallet.ui.compose.components.ButtonPrimaryDefault
 import io.horizontalsystems.bankwallet.ui.compose.components.ButtonPrimaryYellow
 import io.horizontalsystems.bankwallet.ui.compose.components.HFillSpacer
@@ -44,6 +66,8 @@ import io.horizontalsystems.bankwallet.ui.compose.components.subhead1_leah
 import io.horizontalsystems.bankwallet.ui.compose.components.subhead2_leah
 import io.horizontalsystems.core.SnackbarDuration
 import io.horizontalsystems.core.helpers.HudHelper
+import io.horizontalsystems.marketkit.models.BlockchainType
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.parcelize.Parcelize
 
@@ -67,8 +91,41 @@ fun ActivateTokenScreen(
 ) {
     val viewModel = viewModel<ActivateTokenViewModel>(factory = ActivateTokenViewModel.Factory(wallet))
 
+    val unsignedTxState by viewModel.unsignedTxState.collectAsState()
+
     val uiState = viewModel.uiState
     val token = uiState.token
+
+    val context = LocalContext.current
+    val view = LocalView.current
+
+    val nfcHandler = HardwareWalletNFCHandler(context,
+        onSuccess = {
+            viewModel.onNFCWritingSuccess()
+        },
+        onError = { _ ->
+            HudHelper.showErrorMessage(
+                contenView = view,
+                resId = R.string.HardwareWalletAuthentication_TagError,
+                icon = R.drawable.icon_24_warning_2,
+                iconTint = R.color.white
+            )
+        }
+    )
+
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val scannedQr = result.data?.getStringExtra(ModuleField.SCAN_ADDRESS)?: ""
+            viewModel.onScannedQR(scannedQr)
+        }
+    }
+
+    LaunchedEffect(unsignedTxState) {
+        if (unsignedTxState is SendTransactionHardwareState.Sent) {
+            delay(1200)
+            navController.popBackStack()
+        }
+    }
 
     ConfirmTransactionScreen(
         onClickBack = null,
@@ -77,39 +134,102 @@ fun ActivateTokenScreen(
         buttonsSlot = {
             val coroutineScope = rememberCoroutineScope()
             var buttonEnabled by remember { mutableStateOf(true) }
-            val view = LocalView.current
 
-            ButtonPrimaryYellow(
-                modifier = Modifier.fillMaxWidth(),
-                title = stringResource(R.string.Button_Activate),
-                onClick = {
-                    coroutineScope.launch {
-                        buttonEnabled = false
-                        HudHelper.showInProcessMessage(view, R.string.Activate_Activating, SnackbarDuration.INDEFINITE)
+            when (unsignedTxState) {
+                is SendTransactionHardwareState.ReadyToLoad -> {
+                    ButtonPrimaryYellow(
+                        modifier = Modifier.fillMaxWidth(),
+                        title = stringResource(R.string.Button_Activate),
+                        onClick = viewModel::getUnsignedTransaction,
+                        enabled = uiState.activateEnabled && buttonEnabled
+                    )
+                    VSpacer(16.dp)
+                    ButtonPrimaryDefault(
+                        modifier = Modifier.fillMaxWidth(),
+                        title = stringResource(R.string.Button_Cancel),
+                        onClick = navController::popBackStack
+                    )
+                }
 
-                        val result = try {
-                            viewModel.activate()
-
-                            HudHelper.showSuccessMessage(view, R.string.Hud_Text_Done)
-                            ActivateTokenFragment.Result(true)
-                        } catch (t: Throwable) {
-                            HudHelper.showErrorMessage(view, t.javaClass.simpleName)
-                            ActivateTokenFragment.Result(false)
-                        }
-
-                        buttonEnabled = true
-                        navController.setNavigationResultX(result)
-                        navController.popBackStack()
+                is SendTransactionHardwareState.ScanToTransmit -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        contentAlignment = Alignment.BottomCenter
+                    ) {
+                        HardwareWalletScanButtons(
+                            onTryAgainClick = {
+                                viewModel.resetHardwareWalletState()
+                            },
+                            onContinueClick = {
+                                val intent = QRScannerActivity.getScanQrIntent(
+                                    context,
+                                    showPasteButton = false
+                                )
+                                launcher.launch(intent)
+                            }
+                        )
                     }
-                },
-                enabled = uiState.activateEnabled && buttonEnabled
-            )
-            VSpacer(16.dp)
-            ButtonPrimaryDefault(
-                modifier = Modifier.fillMaxWidth(),
-                title = stringResource(R.string.Button_Cancel),
-                onClick = navController::popBackStack
-            )
+                }
+
+                is SendTransactionHardwareState.Error -> {
+                    ButtonPrimaryYellow(
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        title = stringResource(R.string.Button_TryAgain),
+                        onClick = viewModel::resetHardwareWalletState
+                    )
+                }
+
+                null -> {
+                    ButtonPrimaryYellow(
+                        modifier = Modifier.fillMaxWidth(),
+                        title = stringResource(R.string.Button_Activate),
+                        onClick = {
+                            coroutineScope.launch {
+                                buttonEnabled = false
+                                HudHelper.showInProcessMessage(view, R.string.Activate_Activating, SnackbarDuration.INDEFINITE)
+
+                                val result = try {
+                                    viewModel.activate()
+
+                                    HudHelper.showSuccessMessage(view, R.string.Hud_Text_Done)
+                                    ActivateTokenFragment.Result(true)
+                                } catch (t: Throwable) {
+                                    HudHelper.showErrorMessage(view, t.javaClass.simpleName)
+                                    ActivateTokenFragment.Result(false)
+                                }
+
+                                buttonEnabled = true
+                                navController.setNavigationResultX(result)
+                                navController.popBackStack()
+                            }
+                        },
+                        enabled = uiState.activateEnabled && buttonEnabled
+                    )
+                    VSpacer(16.dp)
+                    ButtonPrimaryDefault(
+                        modifier = Modifier.fillMaxWidth(),
+                        title = stringResource(R.string.Button_Cancel),
+                        onClick = navController::popBackStack
+                    )
+                }
+
+                is SendTransactionHardwareState.NFCWritingStarted -> {
+                    val payloadPrefix = "stellar.sign:"
+                    val nfcCallback = NFCCallback(type= NFCCallbackType.SOLANA_SEND, messageText=payloadPrefix + (unsignedTxState as SendTransactionHardwareState.NFCWritingStarted).unsignedTxHex)
+                    Log.d("AAA", "ActivateTokenScreen: StartNFCWriting, unsignedTxHex=${(unsignedTxState as SendTransactionHardwareState.NFCWritingStarted).unsignedTxHex}")
+                    StartNFCWriting(nfcHandler,
+                        nfcCallback,
+                        onCancelClick = {
+                            viewModel.onNFCWritingSuccess()
+                        },
+                        text = "Confirm by tapping Hito Wallet"
+                    )
+                }
+
+                else -> {}
+            }
         }
     ) {
         SectionUniversalLawrence {
@@ -142,6 +262,29 @@ fun ActivateTokenScreen(
                 uiState.feeCoinValue?.getFormattedFull() ?: "---",
                 uiState.feeFiatValue?.getFormattedFull() ?: "---"
             )
+        }
+        VSpacer(height = 16.dp)
+        when (unsignedTxState) {
+            is SendTransactionHardwareState.Loading, SendTransactionHardwareState.Sending -> {
+                VSpacer(height = 64.dp)
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .size(224.dp)
+                        .align(Alignment.CenterHorizontally),
+                    color = ComposeAppTheme.colors.grey
+                )
+            }
+            is SendTransactionHardwareState.Sent -> {
+                HardwareSendSuccess()
+            }
+            is SendTransactionHardwareState.Error -> {
+                HardwareSendError((unsignedTxState as SendTransactionHardwareState.Error).caution)
+            }
+            is SendTransactionHardwareState.ScanToTransmit -> {
+                HardwareWalletSendCautions()
+            }
+
+            else -> {}
         }
 
         uiState.error?.let { error ->

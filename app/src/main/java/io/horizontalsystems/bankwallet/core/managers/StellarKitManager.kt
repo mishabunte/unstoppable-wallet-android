@@ -137,6 +137,11 @@ class StellarKitWrapper(
         }
     }
 
+    fun createChangeTrustAssetTransactionHex(assetId: String, memo: String?): String {
+        Log.d("AAA", "StellarKitWrapper.createChangeTrustAssetTransactionHex: assetId=$assetId")
+        return stellarKit.createChangeTrustTxBase64(assetId, memo)
+    }
+
     fun getNetworkPassphrase(): String {
         if (stellarKit.isMainNet) {
             return MAINNET_NETWORK_ID
