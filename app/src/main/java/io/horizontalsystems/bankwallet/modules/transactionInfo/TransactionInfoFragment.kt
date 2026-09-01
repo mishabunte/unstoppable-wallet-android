@@ -1,5 +1,6 @@
 package io.horizontalsystems.bankwallet.modules.transactionInfo
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -135,6 +136,7 @@ fun TransactionInfoSection(
     CellUniversalLawrenceSection(
         buildList {
             for (viewItem in section) {
+                Log.d("TransactionInfoFragment", "viewItem: $viewItem")
                 when (viewItem) {
                     is TransactionInfoViewItem.Transaction -> {
                         add {

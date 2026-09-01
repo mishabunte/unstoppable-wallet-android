@@ -1,5 +1,6 @@
 package io.horizontalsystems.bankwallet.core.adapters
 
+import android.util.Log
 import io.horizontalsystems.bankwallet.core.ICoinManager
 import io.horizontalsystems.bankwallet.core.managers.SolanaKitWrapper
 import io.horizontalsystems.bankwallet.entities.TransactionValue
@@ -71,6 +72,7 @@ class SolanaTransactionConverter(
 
             (incomingTransfers.isEmpty() && outgoingTransfers.size == 1) -> {
                 val transfer = outgoingTransfers.first()
+                Log.d("SolanaTransactionConverter", "Outgoing transfer: ${transfer.address}, value: ${transfer.value}")
                 SolanaOutgoingTransactionRecord(transaction, baseToken, source, transfer.address, transfer.value, transfer.address == userAddress)
             }
 

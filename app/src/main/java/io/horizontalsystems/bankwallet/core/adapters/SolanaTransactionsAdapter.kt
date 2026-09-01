@@ -1,5 +1,6 @@
 package io.horizontalsystems.bankwallet.core.adapters
 
+import android.util.Log
 import io.horizontalsystems.bankwallet.core.AdapterState
 import io.horizontalsystems.bankwallet.core.App
 import io.horizontalsystems.bankwallet.core.ITransactionsAdapter
@@ -110,12 +111,14 @@ class SolanaTransactionsAdapter(
         }.asFlowable()
     }
 
-    private fun convertToAdapterState(syncState: SolanaKit.SyncState): AdapterState =
-            when (syncState) {
-                is SolanaKit.SyncState.Synced -> AdapterState.Synced
-                is SolanaKit.SyncState.NotSynced -> AdapterState.NotSynced(syncState.error)
-                is SolanaKit.SyncState.Syncing -> AdapterState.Syncing()
-            }
+    private fun convertToAdapterState(syncState: SolanaKit.SyncState): AdapterState {
+        Log.d("SolanaTransactionsAdapter", "Converting sync state: $syncState")
+        when (syncState) {
+            is SolanaKit.SyncState.Synced -> return AdapterState.Synced
+            is SolanaKit.SyncState.NotSynced -> return AdapterState.NotSynced(syncState.error)
+            is SolanaKit.SyncState.Syncing -> return AdapterState.Syncing()
+        }
+    }
 
     companion object {
         const val decimal = 18

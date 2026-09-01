@@ -203,7 +203,7 @@ class SolanaKitWrapper(
             ?: throw IllegalStateException("Recent blockhash is not available")
         if (mintAddress != null) {
             Log.d("SolanaKit", "Creating SPL unsigned transaction from: $from, to: $to, mintAddress: $mintAddress, amount: $amount, recentBlockhash: $recentBlockhash")
-            solanaKit.getSplTransactionHex(
+            val res = solanaKit.getSplTransactionHex(
                 mintAddress = mintAddress,
                 fromPublicKey = from,
                 destinationAddress = to,
@@ -211,6 +211,8 @@ class SolanaKitWrapper(
                 decimals = decimals,
                 recentBlockHash = recentBlockhash
             ).blockingGet()
+            Log.d("SolanaKit", "Created SPL unsigned transaction hex: ${res.toHexString()}")
+            res
         } else {
             solanaKit.getSolTransactionHex(
                 from = from,

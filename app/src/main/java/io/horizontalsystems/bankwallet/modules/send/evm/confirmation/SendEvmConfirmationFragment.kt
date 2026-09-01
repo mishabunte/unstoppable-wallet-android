@@ -2,6 +2,7 @@ package io.horizontalsystems.bankwallet.modules.send.evm.confirmation
 
 import android.app.Activity
 import android.os.Parcelable
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxWidth
