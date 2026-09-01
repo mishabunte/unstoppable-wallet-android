@@ -1,9 +1,11 @@
 package io.horizontalsystems.bankwallet.modules.send
 
 import android.app.Activity
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,6 +22,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -36,6 +42,7 @@ import androidx.navigation.NavController
 import io.horizontalsystems.bankwallet.R
 import io.horizontalsystems.bankwallet.core.App
 import io.horizontalsystems.bankwallet.core.HSCaution
+import io.horizontalsystems.bankwallet.core.slideFromRight
 import io.horizontalsystems.bankwallet.core.stats.StatEntity
 import io.horizontalsystems.bankwallet.core.stats.StatEvent
 import io.horizontalsystems.bankwallet.core.stats.StatPage
@@ -59,6 +66,7 @@ import io.horizontalsystems.bankwallet.modules.qrscanner.QRScannerActivity
 import io.horizontalsystems.bankwallet.ui.compose.ComposeAppTheme
 import io.horizontalsystems.bankwallet.ui.compose.TranslatableString
 import io.horizontalsystems.bankwallet.ui.compose.components.AppBar
+import io.horizontalsystems.bankwallet.ui.compose.components.ButtonPrimaryTransparent
 import io.horizontalsystems.bankwallet.ui.compose.components.ButtonPrimaryYellow
 import io.horizontalsystems.bankwallet.ui.compose.components.CellUniversalLawrenceSection
 import io.horizontalsystems.bankwallet.ui.compose.components.CoinImage
@@ -81,6 +89,11 @@ import io.horizontalsystems.marketkit.models.BlockchainType
 import io.horizontalsystems.marketkit.models.Coin
 import kotlinx.coroutines.delay
 import java.math.BigDecimal
+
+enum class Transport {
+    BLE,
+    NFC
+}
 
 @Composable
 fun SendConfirmationScreen(
@@ -106,7 +119,7 @@ fun SendConfirmationScreen(
     title: String? = null,
     onScannedQR: (String) -> Unit = { _ -> },
     unsignedTxState: SendTransactionHardwareState? = null,
-    onHardwareSignerSendClick: () -> Unit = { },
+    onHardwareSignerSendClick: (Transport) -> Unit = { },
     onHardwareSignerNFCSuccess: () -> Unit = { },
     onHardwareSignerCancel: () -> Unit = { }
 ) {
@@ -127,7 +140,8 @@ fun SendConfirmationScreen(
         onSuccess = {
             onHardwareSignerNFCSuccess()
         },
-        onError = { _ ->
+        onError = { e -> run {
+            Log.e("SendConfirmationScreen", "NFC error: ${e.message}", e)
             HudHelper.showErrorMessage(
                 contenView = view,
                 resId = R.string.HardwareWalletAuthentication_TagError,
@@ -135,7 +149,9 @@ fun SendConfirmationScreen(
                 iconTint = R.color.white
             )
         }
+        }
     )
+    var transport by remember { mutableStateOf(Transport.BLE) }
 
     when (sendResult) {
         SendResult.Sending -> {
@@ -305,6 +321,7 @@ fun SendConfirmationScreen(
                         val payloadPrefix = when (blockchainType) {
                             is BlockchainType.Solana -> "solana.sign:0x"
                             is BlockchainType.Stellar -> "stellar.sign:"
+                            is BlockchainType.Zcash -> "pczt 0x"
                             else -> ""
                         }
                         val nfcCallback = NFCCallback(type= NFCCallbackType.SOLANA_SEND, messageText=payloadPrefix + unsignedTxState.unsignedTxHex)
@@ -335,13 +352,20 @@ fun SendConfirmationScreen(
             // Hardware wallet signing section, skipped if not hardware account
             when (unsignedTxState) {
                 is SendTransactionHardwareState.ReadyToLoad -> {
-                    SendButton(
+                    SendButtonHardware(
                         modifier = Modifier
                             .fillMaxWidth()
                             .align(Alignment.BottomCenter)
                             .padding(start = 16.dp, end = 16.dp, bottom = 48.dp),
                         sendResult = sendResult,
-                        onClickSend = onHardwareSignerSendClick
+                        onClickSend = { onHardwareSignerSendClick(transport) },
+                        transport = transport,
+                        onSwitchTransport = {
+                            transport = when (transport) {
+                                Transport.NFC -> Transport.BLE
+                                Transport.BLE -> Transport.NFC
+                            }
+                        }
                     )
                 }
                 is SendTransactionHardwareState.ScanToTransmit -> {
@@ -491,6 +515,56 @@ fun SendButton(modifier: Modifier, sendResult: SendResult?, onClickSend: () -> U
                 onClick = onClickSend,
                 enabled = true
             )
+        }
+    }
+}
+
+@Composable
+fun SendButtonHardware(modifier: Modifier, sendResult: SendResult?, transport: Transport, onSwitchTransport: () -> Unit, onClickSend: () -> Unit) {
+    when (sendResult) {
+        SendResult.Sending -> {
+            ButtonPrimaryYellow(
+                modifier = modifier,
+                title = stringResource(R.string.Send_Sending),
+                onClick = { },
+                enabled = false
+            )
+        }
+
+        is SendResult.Sent -> {
+            ButtonPrimaryYellow(
+                modifier = modifier,
+                title = stringResource(R.string.Send_Success),
+                onClick = { },
+                enabled = false
+            )
+        }
+
+        else -> {
+            Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row {
+                    Spacer(Modifier.weight(1f))
+
+                    ButtonPrimaryTransparent(
+                        modifier = Modifier.padding(end = 16.dp),
+                        title = stringResource(
+                            if (transport == Transport.BLE) R.string.Send_Confirmation_Button_Switch_To_NFC
+                            else R.string.Send_Confirmation_Button_Switch_To_Bluetooth
+                        ),
+                        onClick = onSwitchTransport,
+                        enabled = true
+                    )
+                }
+                ButtonPrimaryYellow(
+                    modifier = Modifier.fillMaxWidth(),
+                    title = stringResource(
+                        if (transport == Transport.BLE) R.string.Send_Confirmation_Send_Button_HardwareBLE
+                        else R.string.Send_Confirmation_Send_Button_HardwareNFC
+                    ),
+                    onClick = onClickSend,
+                    enabled = true
+                )
+            }
         }
     }
 }

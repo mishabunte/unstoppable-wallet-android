@@ -384,10 +384,12 @@ dependencies {
     implementation 'com.github.horizontalsystems:tron-kit-android:bdd7602'
     // Zcash SDK
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
-    implementation "cash.z.ecc.android:zcash-android-sdk:2.2.12"
+    implementation "io.github.4acha4a:zcash-android-sdk:3.0.0-hito.1"
     implementation("io.github.binance:binance-connector-java:3.0.0rc2") {
         exclude group: "org.bouncycastle", module: "bcprov-jdk18on"
     }
+    // BBQr QR code generator
+    implementation 'org.bitcoinppl:bbqr-android:0.4.1'
 
     implementation "androidx.compose.material:material-icons-extended"
 

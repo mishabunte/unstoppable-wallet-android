@@ -40,6 +40,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import com.google.gson.Gson
 import io.horizontalsystems.bankwallet.R
@@ -60,8 +61,48 @@ import java.time.Instant
 import java.util.Locale
 import java.security.SecureRandom
 
+internal const val NDEF_MAX_MESSAGE_LEN = 4092
+private const val NFC_LOG_TAG = "HardwareWalletNFC"
+
+// Long NDEF text record: flags (1), type length (1), payload length (4), type (1),
+// encoding/language status (1), and the two-byte English language code.
+private const val NDEF_TEXT_RECORD_OVERHEAD = 10
+internal const val NDEF_MAX_TEXT_PACKET_LEN = NDEF_MAX_MESSAGE_LEN - NDEF_TEXT_RECORD_OVERHEAD
+
+internal fun splitNfcPayload(text: String): List<String> {
+    Log.d(NFC_LOG_TAG, "Payload: $text")
+    val payload = text.substringBefore('\n') + '\n'
+    val packets = mutableListOf<String>()
+    val packet = StringBuilder()
+    var packetByteCount = 0
+    var offset = 0
+
+    while (offset < payload.length) {
+        val codePoint = Character.codePointAt(payload, offset)
+        val character = String(Character.toChars(codePoint))
+        val characterByteCount = character.toByteArray(Charsets.UTF_8).size
+
+        if (packet.isNotEmpty() && packetByteCount + characterByteCount > NDEF_MAX_TEXT_PACKET_LEN) {
+            packets.add(packet.toString())
+            packet.clear()
+            packetByteCount = 0
+        }
+
+        packet.append(character)
+        packetByteCount += characterByteCount
+        offset += Character.charCount(codePoint)
+    }
+
+    if (packet.isNotEmpty()) {
+        packets.add(packet.toString())
+    }
+
+    return packets
+}
+
 enum class NFCCallbackType {
     AUTHENTICATION,
+    PING,
     PAIRING,
     ETH_SEND,
     SOLANA_SEND,
@@ -89,7 +130,9 @@ fun AnimatedNFCBox(onCancelClick: () -> Unit, text: String = "Tap to scan the au
         atEnd = !atEnd
         delay(1000L)
     }
-    Dialog(onDismissRequest = onCancelClick) {
+    Dialog(onDismissRequest = onCancelClick,
+        properties = DialogProperties(dismissOnClickOutside = false))
+    {
         Column(
             modifier = Modifier
                 .clip(RoundedCornerShape(16.dp))
@@ -325,8 +368,19 @@ class HardwareWalletNFCHandler(
         handleIntent(nfcCallback)
     }
 
+    private fun handleHitoPingIntent(nfcCallback: NFCCallback) {
+        handleIntent(nfcCallback)
+    }
+
     fun handleHitoIntent(nfcCallback: NFCCallback) {
-        nfcCallbackMap[nfcCallback.type]?.invoke(nfcCallback)
+        when (nfcCallback.type) {
+            NFCCallbackType.AUTHENTICATION -> handleHitoAuthIntent(nfcCallback)
+            NFCCallbackType.PAIRING -> handleHitoPairIntent(nfcCallback)
+            NFCCallbackType.ETH_SEND -> handleHitoEthSendIntent(nfcCallback)
+            NFCCallbackType.SOLANA_SEND -> handleHitoSolSendIntent(nfcCallback)
+            NFCCallbackType.PING -> handleHitoPingIntent(nfcCallback)
+            else -> onError(IllegalArgumentException("Unsupported NFC callback type: ${nfcCallback.type}"))
+        }
     }
 
     private fun handleIntent(nfcCallback: NFCCallback) {
@@ -335,14 +389,29 @@ class HardwareWalletNFCHandler(
                 NfcAdapter.ACTION_TAG_DISCOVERED,
                 NfcAdapter.ACTION_TECH_DISCOVERED,
                 NfcAdapter.ACTION_NDEF_DISCOVERED
-            )) return
+            )) {
+            Log.d(NFC_LOG_TAG, "Ignoring NFC intent: action=${intent?.action}")
+            return
+        }
+
+        Log.d(NFC_LOG_TAG, "Handling NFC intent: action=${intent?.action}, type=${nfcCallback.type}")
 
         val rawMessages = intent?.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES)
         val tag: Tag? = intent?.getParcelableExtra(NfcAdapter.EXTRA_TAG)
+        Log.d(
+            NFC_LOG_TAG,
+            "Intent data: rawMessages=${rawMessages?.size ?: 0}, " +
+                "tagPresent=${tag != null}, technologies=${tag?.techList?.joinToString() ?: "none"}"
+        )
 
         try {
             val record = (rawMessages?.getOrNull(0) as? NdefMessage)?.records?.getOrNull(0)
                 ?: throw IllegalStateException("Invalid NDEF message")
+
+            Log.d(
+                NFC_LOG_TAG,
+                "Incoming NDEF record: tnf=${record.tnf}, payloadBytes=${record.payload.size}"
+            )
 
             val uriBody = record.payload.drop(1).toByteArray().toString(Charsets.UTF_8)
 //            if (!uriBody.startsWith("app.hito.dev/#eth/send")) throw IOException("Invalid NFC tag")
@@ -353,31 +422,110 @@ class HardwareWalletNFCHandler(
             //val messageText = "evm.sign:0x1234567890abcdef1234567890abcdef12345678:0xabcdefabcdefabcdefabcdefabcdefabcdefabcdef"
 
 
-            val success = tag?.let { writeTextToTag(it, nfcCallback.messageText!!) } == true
-            if (success) onSuccess() else onError(IOException("Failed to write tag"))
+            val messageText = nfcCallback.messageText
+                ?: throw IllegalStateException("NFC payload is missing")
+            val success = tag?.let { writeTextToTag(it, messageText) } == true
+            if (success) {
+                Log.d(NFC_LOG_TAG, "All NFC packets written successfully")
+                onSuccess()
+            } else {
+                Log.d(NFC_LOG_TAG, "NFC write failed")
+                onError(IOException("Failed to write tag"))
+            }
 
         } catch (e: Exception) {
+            Log.d(NFC_LOG_TAG, "Failed to handle NFC intent", e)
             onError(e)
         }
     }
 
     private fun writeTextToTag(tag: Tag, text: String): Boolean {
-        val textRecord = createTextRecord(text, Locale.ENGLISH, true)
-        val ndefMessage = NdefMessage(arrayOf(textRecord))
-        return writeTag(tag, ndefMessage)
+        val payloadByteCount = text.substringBefore('\n').toByteArray(Charsets.UTF_8).size + 1
+        val packets = splitNfcPayload(text)
+        Log.d(
+            NFC_LOG_TAG,
+            "Preparing NFC payload: bytesWithTerminator=$payloadByteCount, packets=${packets.size}, " +
+                "maxMessageBytes=$NDEF_MAX_MESSAGE_LEN, maxTextBytes=$NDEF_MAX_TEXT_PACKET_LEN"
+        )
+
+        val ndefMessages = packets.mapIndexed { index, packet ->
+            val textRecord = createTextRecord(packet, Locale.ENGLISH, true)
+            val ndefMessage = NdefMessage(arrayOf(textRecord))
+            Log.d(
+                NFC_LOG_TAG,
+                "Prepared packet ${index + 1}/${packets.size}: " +
+                    "textBytes=${packet.toByteArray(Charsets.UTF_8).size}, " +
+                    "ndefBytes=${ndefMessage.toByteArray().size}, terminatesPayload=${packet.endsWith('\n')}"
+            )
+            ndefMessage
+        }
+        return writeTag(tag, ndefMessages)
     }
 
-    private fun writeTag(tag: Tag, ndefMessage: NdefMessage): Boolean {
+    private fun writeTag(tag: Tag, ndefMessages: List<NdefMessage>): Boolean {
         val ndef = Ndef.get(tag)
+        if (ndef == null) {
+            Log.d(NFC_LOG_TAG, "Tag does not support Ndef technology")
+            return false
+        }
+
         return try {
-            ndef?.run {
+            ndef.run {
+                Log.d(NFC_LOG_TAG, "Connecting to NDEF tag")
                 connect()
-                if (!isWritable || maxSize < ndefMessage.toByteArray().size) return false
-                writeNdefMessage(ndefMessage)
+                Log.d(
+                    NFC_LOG_TAG,
+                    "Connected to NDEF tag: writable=$isWritable, maxSize=$maxSize, " +
+                        "cachedType=$type, packets=${ndefMessages.size}"
+                )
+                if (!isWritable) {
+                    Log.d(NFC_LOG_TAG, "NDEF tag is read-only")
+                    return false
+                }
+
+                ndefMessages.forEachIndexed { index, ndefMessage ->
+                    val messageSize = ndefMessage.toByteArray().size
+                    if (messageSize > NDEF_MAX_MESSAGE_LEN) {
+                        Log.d(
+                            NFC_LOG_TAG,
+                            "Packet ${index + 1}/${ndefMessages.size} exceeds protocol limit: " +
+                                "$messageSize > $NDEF_MAX_MESSAGE_LEN"
+                        )
+                        return false
+                    }
+                    if (maxSize < messageSize) {
+                        Log.d(
+                            NFC_LOG_TAG,
+                            "Packet ${index + 1}/${ndefMessages.size} does not fit tag: " +
+                                "$messageSize > $maxSize"
+                        )
+                        return false
+                    }
+
+                    val startedAt = System.currentTimeMillis()
+                    Log.d(
+                        NFC_LOG_TAG,
+                        "Writing packet ${index + 1}/${ndefMessages.size}: ndefBytes=$messageSize"
+                    )
+                    writeNdefMessage(ndefMessage)
+                    Log.d(
+                        NFC_LOG_TAG,
+                        "Packet ${index + 1}/${ndefMessages.size} written in " +
+                            "${System.currentTimeMillis() - startedAt} ms"
+                    )
+                }
                 true
-            } ?: false
+            }
         } catch (e: Exception) {
+            Log.d(NFC_LOG_TAG, "Exception while writing NDEF packets", e)
             false
+        } finally {
+            try {
+                ndef.close()
+                Log.d(NFC_LOG_TAG, "NDEF connection closed")
+            } catch (e: Exception) {
+                Log.d(NFC_LOG_TAG, "Failed to close NDEF connection", e)
+            }
         }
     }
 
@@ -391,8 +539,5 @@ class HardwareWalletNFCHandler(
         return NdefRecord(NdefRecord.TNF_WELL_KNOWN, NdefRecord.RTD_TEXT, ByteArray(0), data)
     }
 }
-
-
-
 
 

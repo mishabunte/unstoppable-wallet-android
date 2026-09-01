@@ -1,5 +1,6 @@
 package io.horizontalsystems.bankwallet.core.storage
 
+import android.util.Log
 import io.horizontalsystems.bankwallet.core.IAccountsStorage
 import io.horizontalsystems.bankwallet.entities.Account
 import io.horizontalsystems.bankwallet.entities.AccountOrigin
@@ -21,6 +22,7 @@ class AccountsStorage(appDatabase: AppDatabase) : IAccountsStorage {
         private const val SECRET_KEY = "secret_key"
         private const val ADDRESS = "address"
         private const val SOLANA_ADDRESS = "solana_address"
+        private const val ZCASH_HARDWARE = "zcash_key_hardware"
         private const val TRON_ADDRESS = "tron_address"
         private const val TON_ADDRESS = "ton_address"
         private const val STELLAR_ADDRESS = "stellar_address"
@@ -63,6 +65,10 @@ class AccountsStorage(appDatabase: AppDatabase) : IAccountsStorage {
                             TON_ADDRESS -> AccountType.TonAddress(record.key!!.value)
                             STELLAR_ADDRESS -> AccountType.StellarAddress(record.key!!.value)
                             STELLAR_ADDRESS_HARDWARE -> AccountType.StellarAddressHardware(record.key!!.value)
+                            ZCASH_HARDWARE -> {
+                                Log.d("AccountsStorage", "ZCASH_HARDWARE account type found for account id: ${record.id}")
+                                AccountType.ZcashHardware.fromSerialized(record.key!!.value)
+                            }
                             BITCOIN_ADDRESS -> AccountType.BitcoinAddress.fromSerialized(record.key!!.value)
                             HD_EXTENDED_LEY -> AccountType.HdExtendedKey(record.key!!.value)
                             ADDRESS_HARDWARE -> AccountType.EvmAddressHardware(record.key!!.value)
@@ -154,6 +160,10 @@ class AccountsStorage(appDatabase: AppDatabase) : IAccountsStorage {
             is AccountType.SolanaAddress -> {
                 key = SecretString(account.type.address)
                 accountType = SOLANA_ADDRESS
+            }
+            is AccountType.ZcashHardware -> {
+                key = SecretString(account.type.serialized)
+                accountType = ZCASH_HARDWARE
             }
             is AccountType.TronAddress -> {
                 key = SecretString(account.type.address)

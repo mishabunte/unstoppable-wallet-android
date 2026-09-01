@@ -385,7 +385,12 @@ interface ISendEthereumAdapter {
 interface ISendZcashAdapter {
     val availableBalance: BigDecimal
     val fee: BigDecimal
-
+    fun isHardwareAccount(): Boolean
+    fun isTestNet(): Boolean
+    suspend fun getUnsignedTransaction(amount: BigDecimal, address: String, memo: String, logger: AppLogger): String
+    suspend fun sendRawTransaction(pcztHex: String, logger: AppLogger)
+    suspend fun submitHardwareSignedTransaction(signedPayload: ByteArray)
+    fun clearHardwareSigningRequest()
     suspend fun validate(address: String): ZcashAdapter.ZCashAddressType
     suspend fun send(amount: BigDecimal, address: String, memo: String, logger: AppLogger)
 }

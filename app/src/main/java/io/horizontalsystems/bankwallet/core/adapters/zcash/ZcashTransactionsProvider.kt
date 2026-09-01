@@ -12,60 +12,63 @@ import io.reactivex.subjects.PublishSubject
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.min
 
 class ZcashTransactionsProvider(
     private val accountUuid: AccountUuid,
     private val synchronizer: SdkSynchronizer
 ) {
-    private val mutex = Mutex()
-    private var transactions = listOf<ZcashTransaction>()
-    private val newTransactionsSubject = PublishSubject.create<List<ZcashTransaction>>()
+    private val transactions = AtomicReference<List<ZcashTransaction>>(emptyList())
+    private val newTransactionsSubject =
+        PublishSubject.create<List<ZcashTransaction>>().toSerialized()
 
-    fun onTransactions(transactionOverviews: List<TransactionOverview>) {
-        synchronizer.coroutineScope.launch {
-            mutex.withLock {
-                val newTransactions = transactionOverviews.filter { tx ->
-                    transactions.none { it.transactionHash.contentEquals(tx.txId.value.byteArray) && it.minedHeight == tx.minedHeight?.value }
-                }
-
-                if (newTransactions.isNotEmpty()) {
-                    val newZcashTransactions = newTransactions.map {
-                        val recipients = if (it.isSentTransaction) {
-                            synchronizer.getRecipients(it)
-                                .filterIsInstance<TransactionRecipient>()
-                                .toList()
-                        } else {
-                            null
-                        }
-                        val memo = synchronizer.getMemos(it).firstOrNull()
-                        ZcashTransaction(accountUuid, it, recipients, memo)
-                    }
-                    newTransactionsSubject.onNext(newZcashTransactions)
-                    val notUpdatedTransactions =
-                        transactions.filter { old -> newZcashTransactions.none { new -> new.transactionHash.contentEquals(old.transactionHash) } }
-                    transactions = (notUpdatedTransactions + newZcashTransactions).sortedDescending()
-                }
+    /**
+     * Processes complete snapshots sequentially from the allTransactions collector.
+     */
+    suspend fun onTransactions(transactionOverviews: List<TransactionOverview>) {
+        val updatedTransactions = transactionOverviews.map { overview ->
+            val recipients = if (overview.isSentTransaction) {
+                synchronizer.getRecipients(overview)
+                    .filterIsInstance<TransactionRecipient>()
+                    .toList()
+            } else {
+                null
             }
+
+            val memo = synchronizer.getMemos(overview).firstOrNull()
+            ZcashTransaction(accountUuid, overview, recipients, memo)
+        }.sortedDescending()
+
+        val previousTransactions = transactions.getAndSet(updatedTransactions)
+        val addedOrUpdatedTransactions = updatedTransactions.filter { updated ->
+            previousTransactions.none { previous ->
+                previous.hasSameContentAs(updated)
+            }
+        }
+
+        // Notify observers only after the cache contains the new snapshot.
+        if (addedOrUpdatedTransactions.isNotEmpty()) {
+            newTransactionsSubject.onNext(addedOrUpdatedTransactions)
         }
     }
 
-    fun getNewTransactionsFlowable(transactionType: FilterTransactionType, address: String?): Flowable<List<ZcashTransaction>> {
+    fun getNewTransactionsFlowable(
+        transactionType: FilterTransactionType,
+        address: String?
+    ): Flowable<List<ZcashTransaction>> {
         val filters = getFilters(transactionType, address)
 
         val observable = if (filters.isEmpty()) {
             newTransactionsSubject
         } else {
-            newTransactionsSubject.map { txs ->
-                txs.filter { tx ->
-                    filters.all { filter -> filter.invoke(tx) }
+            newTransactionsSubject
+                .map { transactionList ->
+                    transactionList.filter { transaction ->
+                        filters.all { filter -> filter(transaction) }
+                    }
                 }
-            }.filter {
-                it.isNotEmpty()
-            }
+                .filter { it.isNotEmpty() }
         }
 
         return observable.toFlowable(BackpressureStrategy.LATEST)
@@ -73,7 +76,7 @@ class ZcashTransactionsProvider(
 
     private fun getFilters(
         transactionType: FilterTransactionType,
-        address: String?,
+        address: String?
     ) = buildList<(ZcashTransaction) -> Boolean> {
         when (transactionType) {
             FilterTransactionType.All -> Unit
@@ -84,8 +87,10 @@ class ZcashTransactionsProvider(
         }
 
         if (address != null) {
-            add { tx ->
-                tx.recipients?.any { it.addressValue == address } ?: false
+            add { transaction ->
+                transaction.recipients
+                    ?.any { recipient -> recipient.addressValue == address }
+                    ?: false
             }
         }
     }
@@ -94,22 +99,49 @@ class ZcashTransactionsProvider(
         from: Triple<ByteArray, Long, Int>?,
         transactionType: FilterTransactionType,
         address: String?,
-        limit: Int,
-    ) = Single.create { emitter ->
-        try {
-            val filters = getFilters(transactionType, address)
-            val filtered = when {
-                filters.isEmpty() -> transactions
-                else -> transactions.filter { tx -> filters.all { it.invoke(tx) } }
+        limit: Int
+    ): Single<List<ZcashTransaction>> = Single.fromCallable {
+        require(limit >= 0) { "Limit must not be negative" }
+
+        val snapshot = transactions.get()
+        val filters = getFilters(transactionType, address)
+        val filtered = if (filters.isEmpty()) {
+            snapshot
+        } else {
+            snapshot.filter { transaction ->
+                filters.all { filter -> filter(transaction) }
+            }
+        }
+
+        val fromIndex = from?.let { cursor ->
+            val index = filtered.indexOfFirst { transaction ->
+                transaction.transactionHash.contentEquals(cursor.first) &&
+                        transaction.timestamp == cursor.second &&
+                        transaction.transactionIndex == cursor.third
             }
 
-            val fromIndex = from?.let { (transactionHash, timestamp, transactionIndex) ->
-                filtered.indexOfFirst { it.transactionHash.contentEquals(transactionHash) && it.timestamp == timestamp && it.transactionIndex == transactionIndex } + 1
-            } ?: 0
+            if (index >= 0) index + 1 else filtered.size
+        } ?: 0
 
-            emitter.onSuccess(filtered.subList(fromIndex, min(filtered.size, fromIndex + limit)))
-        } catch (error: Throwable) {
-            emitter.onError(error)
-        }
+        val toIndex = min(
+            filtered.size.toLong(),
+            fromIndex.toLong() + limit.toLong()
+        ).toInt()
+
+        filtered.subList(fromIndex, toIndex)
+    }
+
+    private fun ZcashTransaction.hasSameContentAs(other: ZcashTransaction): Boolean {
+        return transactionHash.contentEquals(other.transactionHash) &&
+                minedHeight == other.minedHeight &&
+                timestamp == other.timestamp &&
+                transactionIndex == other.transactionIndex &&
+                isIncoming == other.isIncoming &&
+                recipients == other.recipients &&
+                memo == other.memo &&
+                feePaid == other.feePaid &&
+                failed == other.failed &&
+                shieldDirection == other.shieldDirection &&
+                value == other.value
     }
 }

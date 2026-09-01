@@ -63,6 +63,12 @@ class SelectHardwareBlockchainsViewModel(
                     coinViewItemForBlockchain(it)
                 }
             }
+            is AccountType.ZcashHardware -> {
+                title = R.string.Watch_Select_Blockchains
+                coinViewItems = service.tokens(accountType).map {
+                    coinViewItemForBlockchain(it)
+                }
+            }
             is AccountType.HdExtendedKeyHardware -> {
                 title = R.string.Watch_Select_Coins
                 coinViewItems = service.tokens(accountType).map {

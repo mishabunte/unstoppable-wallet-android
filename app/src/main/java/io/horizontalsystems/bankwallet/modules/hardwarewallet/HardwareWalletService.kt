@@ -38,9 +38,7 @@ class HardwareWalletService(
                 }
 
                 is AccountType.StellarAddress, is AccountType.StellarAddressHardware -> {
-                    Log.d("HardwareWalletService", "tokens: Adding Stellar token for account type $accountType")
                     if (BlockchainType.Stellar.supports(accountType)) {
-                        Log.d("HardwareWalletService", "tokens: Stellar supported for account type $accountType")
                         add(TokenQuery(BlockchainType.Stellar, TokenType.Native))
                     }
                 }
@@ -48,6 +46,11 @@ class HardwareWalletService(
                 is AccountType.TronAddress, is AccountType.TronAddressHardware -> {
                     if (BlockchainType.Tron.supports(accountType)) {
                         add(TokenQuery(BlockchainType.Tron, TokenType.Native))
+                    }
+                }
+                is AccountType.ZcashHardware -> {
+                    if (BlockchainType.Zcash.supports(accountType)) {
+                        add(TokenQuery(BlockchainType.Zcash, TokenType.Native))
                     }
                 }
 

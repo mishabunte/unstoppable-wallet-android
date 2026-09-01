@@ -66,6 +66,11 @@ class WatchAddressService(
                         add(TokenQuery(BlockchainType.Stellar, TokenType.Native))
                     }
                 }
+                is AccountType.ZcashHardware -> {
+                    if (BlockchainType.Zcash.supports(accountType)) {
+                        add(TokenQuery(BlockchainType.Zcash, TokenType.Native))
+                    }
+                }
 
                 is AccountType.HdExtendedKey -> {
                     if (BlockchainType.Bitcoin.supports(accountType)) {

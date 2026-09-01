@@ -1,6 +1,7 @@
 package io.horizontalsystems.bankwallet.core.adapters.zcash
 
 import android.content.Context
+import android.util.Log
 import cash.z.ecc.android.sdk.CloseableSynchronizer
 import cash.z.ecc.android.sdk.SdkSynchronizer
 import cash.z.ecc.android.sdk.Synchronizer
@@ -14,11 +15,16 @@ import cash.z.ecc.android.sdk.ext.fromHex
 import cash.z.ecc.android.sdk.model.Account
 import cash.z.ecc.android.sdk.model.AccountBalance
 import cash.z.ecc.android.sdk.model.AccountCreateSetup
+import cash.z.ecc.android.sdk.model.AccountImportSetup
+import cash.z.ecc.android.sdk.model.AccountPurpose
 import cash.z.ecc.android.sdk.model.BlockHeight
 import cash.z.ecc.android.sdk.model.FirstClassByteArray
+import cash.z.ecc.android.sdk.model.Pczt
 import cash.z.ecc.android.sdk.model.PercentDecimal
 import cash.z.ecc.android.sdk.model.Proposal
+import cash.z.ecc.android.sdk.model.SaplingNsk
 import cash.z.ecc.android.sdk.model.TransactionSubmitResult
+import cash.z.ecc.android.sdk.model.UnifiedFullViewingKey
 import cash.z.ecc.android.sdk.model.Zatoshi
 import cash.z.ecc.android.sdk.model.ZcashNetwork
 import cash.z.ecc.android.sdk.model.Zip32AccountIndex
@@ -52,13 +58,16 @@ import io.reactivex.BackpressureStrategy
 import io.reactivex.Flowable
 import io.reactivex.Single
 import io.reactivex.subjects.PublishSubject
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.withLock
 import java.math.BigDecimal
 import java.util.regex.Pattern
 import kotlin.math.max
-
+private const val HARDWARE_KEY_SOURCE = "hardware-wallet"
 class ZcashAdapter(
     context: Context,
     private val wallet: Wallet,
@@ -66,13 +75,26 @@ class ZcashAdapter(
     private val localStorage: ILocalStorage,
 ) : IAdapter, IBalanceAdapter, IReceiveAdapter, ITransactionsAdapter, ISendZcashAdapter {
 
+    private val pcztMutex = kotlinx.coroutines.sync.Mutex()
     private var accountBirthday = 0L
     private val existingWallet = localStorage.zcashAccountIds.contains(wallet.account.id)
     private val confirmationsThreshold = 10
     private val decimalCount = 8
-    private val network: ZcashNetwork = ZcashNetwork.Mainnet
+    //private val network: ZcashNetwork = ZcashNetwork.Mainnet
     private val feeChangeHeight: Long = 1_077_550
-    private val lightWalletEndpoint = LightWalletEndpoint(host = "zec.rocks", port = 443, isSecure = true)
+
+    private fun ByteArray.toHex(): String {
+        val alphabet = "0123456789abcdef"
+        val result = CharArray(size * 2)
+
+        forEachIndexed { index, byte ->
+            val value = byte.toInt() and 0xff
+            result[index * 2] = alphabet[value ushr 4]
+            result[index * 2 + 1] = alphabet[value and 0x0f]
+        }
+
+        return String(result)
+    }
 
     private val synchronizer: CloseableSynchronizer
     private val transactionsProvider: ZcashTransactionsProvider
@@ -81,16 +103,69 @@ class ZcashAdapter(
     private val lastBlockUpdatedSubject: PublishSubject<Unit> = PublishSubject.create()
     private val balanceUpdatedSubject: PublishSubject<Unit> = PublishSubject.create()
 
-    private val accountType = (wallet.account.type as? AccountType.Mnemonic) ?: throw UnsupportedAccountException()
-    private val seed = accountType.seed
+    private val accountType: AccountType = wallet.account.type
+    private val hardwareAccountType: AccountType.ZcashHardware?
+        get() = accountType as? AccountType.ZcashHardware
+
+    private val mnemonicAccountType: AccountType.Mnemonic?
+        get() = accountType as? AccountType.Mnemonic
+    private val network: ZcashNetwork = when (val type = accountType) {
+        is AccountType.ZcashHardware -> {
+            if (type.isTestNet) ZcashNetwork.Testnet else ZcashNetwork.Mainnet
+        }
+
+        // Mnemonic accounts currently have no persisted network flag.
+        is AccountType.Mnemonic -> ZcashNetwork.Mainnet
+        else -> throw UnsupportedAccountException()
+    }
+
+    private fun String.toNskBytes(name: String): ByteArray {
+        val normalized = trim()
+
+        require(Regex("^[0-9a-fA-F]{64}$").matches(normalized)) {
+            "$name must contain 32 bytes encoded as 64 hex characters"
+        }
+
+        return normalized.fromHex().also { bytes ->
+            require(bytes.size == 32) {
+                "$name must contain exactly 32 bytes"
+            }
+        }
+    }
+
+    private val lightWalletEndpoint: LightWalletEndpoint =
+        if (network == ZcashNetwork.Testnet) {
+            LightWalletEndpoint(
+                host = "testnet.zec.rocks",
+                port = 443,
+                isSecure = true
+            )
+        } else {
+            LightWalletEndpoint(
+                host = "zec.rocks",
+                port = 443,
+                isSecure = true
+            )
+        }
+
+    override val isMainNet: Boolean
+        get() = network == ZcashNetwork.Mainnet
+//    private val seed = accountType.seed
+
+    override fun isHardwareAccount(): Boolean {
+        return accountType is AccountType.ZcashHardware
+    }
+
+    override fun isTestNet(): Boolean {
+        return network == ZcashNetwork.Testnet
+    }
 
     private val zcashAccount: Account
+    private var pendingPcztWithProofs: Pczt? = null
 
     private val minimalShieldThreshold: BigDecimal = BigDecimal("0.0004") // minimal transparent balance to shielding
 
     override val receiveAddress: String
-
-    override val isMainNet: Boolean = true
 
     init {
         val walletInitMode = if (existingWallet) {
@@ -117,19 +192,150 @@ class ZcashAdapter(
         birthday?.value?.let {
             accountBirthday = it
         }
+        val alias = getValidAliasFromAccountId(wallet.account.id)
 
-        synchronizer = Synchronizer.newBlocking(
-            context = context,
-            zcashNetwork = network,
-            alias = getValidAliasFromAccountId(wallet.account.id),
-            lightWalletEndpoint = lightWalletEndpoint,
-            setup = AccountCreateSetup(accountName = wallet.account.name, keySource = null, seed = FirstClassByteArray(seed)),
-            birthday = birthday,
-            walletInitMode = walletInitMode
+        val accountCreateSetup = mnemonicAccountType?.let { mnemonic ->
+            AccountCreateSetup(
+                accountName = wallet.account.name,
+                keySource = null,
+                seed = FirstClassByteArray(mnemonic.seed)
+            )
+        }
+        Log.d(
+            "ZcashAdapter",
+            "App account type: ${wallet.account.type::class.qualifiedName}"
         )
+        fun openSynchronizer(
+            mode: WalletInitMode
+        ): CloseableSynchronizer {
+            return Synchronizer.newBlocking(
+                context = context,
+                zcashNetwork = network,
+                alias = alias,
+                lightWalletEndpoint = lightWalletEndpoint,
+                setup = accountCreateSetup,
+                birthday = birthday,
+                walletInitMode = mode,
+                isTorEnabled = false,
+                isExchangeRateEnabled = false
+            )
+        }
 
-        zcashAccount = runBlocking { synchronizer.getAccounts().first() }
-        receiveAddress = runBlocking { synchronizer.getUnifiedAddress(zcashAccount) }
+        Log.d("ZcashAdapter", "Opening initial synchronizer")
+
+        var currentSynchronizer = openSynchronizer(walletInitMode)
+
+        Log.d("ZcashAdapter", "Initial synchronizer opened")
+
+        var accountImported = false
+
+        var currentAccount = runBlocking {
+            when (val type = accountType) {
+                is AccountType.ZcashHardware -> {
+                    val seedFingerprint = type.seedFingerprint.toSeedFingerprintBytes()
+                    val accountIndex = Zip32AccountIndex.new(type.accountIndex)
+
+                    val existingAccount = currentSynchronizer.getAccounts()
+                        .firstOrNull { account ->
+                            account.ufvk == type.ufvk
+                        }
+
+                    if (existingAccount != null) {
+                        val storedSeedFingerprint = existingAccount.seedFingerprint
+                        val storedAccountIndex = existingAccount.hdAccountIndex
+
+                        check(storedSeedFingerprint != null && storedAccountIndex != null) {
+                            "Hardware account was imported without ZIP-32 derivation metadata. " +
+                                    "Recreate the Zcash SDK wallet and import the hardware account again."
+                        }
+
+                        check(storedSeedFingerprint.contentEquals(seedFingerprint)) {
+                            "Stored seed fingerprint does not match the hardware wallet"
+                        }
+
+                        check(storedAccountIndex == accountIndex) {
+                            "Stored ZIP-32 account index does not match the hardware wallet"
+                        }
+
+                        Log.d(
+                            "ZcashAdapter",
+                            "Existing hardware account found with ZIP-32 metadata"
+                        )
+
+                        existingAccount
+                    } else {
+                        Log.d("ZcashAdapter", "Importing hardware spending account")
+
+                        currentSynchronizer.importAccountByUfvk(
+                            AccountImportSetup(
+                                accountName = wallet.account.name,
+                                keySource = HARDWARE_KEY_SOURCE,
+                                purpose = AccountPurpose.Spending(
+                                    seedFingerprint = seedFingerprint,
+                                    zip32AccountIndex = accountIndex
+                                ),
+                                ufvk = UnifiedFullViewingKey(type.ufvk),
+                                birthday = birthday
+                            )
+                        ).also {
+                            accountImported = true
+
+                            Log.d(
+                                "ZcashAdapter",
+                                "Hardware account imported: " +
+                                        "keySource=${it.keySource}, " +
+                                        "accountIndex=${it.hdAccountIndex?.index}, " +
+                                        "hasSeedFingerprint=${it.seedFingerprint != null}"
+                            )
+                        }
+                    }
+                }
+
+                is AccountType.Mnemonic -> {
+                    currentSynchronizer.getAccounts().firstOrNull()
+                        ?: error("Mnemonic account was not created")
+                }
+
+                else -> throw UnsupportedAccountException()
+            }
+        }
+
+        if (accountImported) {
+            Log.d("ZcashAdapter", "Closing initial synchronizer")
+
+            currentSynchronizer.close()
+
+            Log.d("ZcashAdapter", "Reopening synchronizer")
+
+            currentSynchronizer = openSynchronizer(
+                WalletInitMode.ExistingWallet
+            )
+
+            currentAccount = runBlocking {
+                val hardwareType = accountType as AccountType.ZcashHardware
+
+                currentSynchronizer.getAccounts()
+                    .firstOrNull { account ->
+                        account.ufvk == hardwareType.ufvk
+                    }
+                    ?: error("Imported hardware account was not found")
+            }
+
+            Log.d(
+                "ZcashAdapter",
+                "Synchronizer reopened: keySource=${currentAccount.keySource}"
+            )
+        }
+
+        synchronizer = currentSynchronizer
+        zcashAccount = currentAccount
+        receiveAddress = when (val type = accountType) {
+            is AccountType.ZcashHardware -> type.unifiedAddress
+            is AccountType.Mnemonic -> runBlocking {
+                synchronizer.getUnifiedAddress(zcashAccount)
+            }
+            else -> throw UnsupportedAccountException()
+        }
         transactionsProvider = ZcashTransactionsProvider(zcashAccount.accountUuid, synchronizer as SdkSynchronizer)
         synchronizer.onProcessorErrorHandler = ::onProcessorError
         synchronizer.onChainErrorHandler = ::onChainError
@@ -155,6 +361,330 @@ class ZcashAdapter(
     }
 
     override fun refresh() {
+    }
+
+    private fun BigDecimal.toZatoshiExact(): Zatoshi {
+        require(signum() > 0) {
+            "Amount must be greater than zero"
+        }
+
+        val value = movePointRight(8).longValueExact()
+        return Zatoshi(value)
+    }
+
+    private fun String.toSeedFingerprintBytes(): ByteArray {
+        val normalized = trim()
+
+        require(Regex("^[0-9a-fA-F]{64}$").matches(normalized)) {
+            "Seed fingerprint must contain 64 hex characters"
+        }
+
+        return normalized.fromHex().also { bytes ->
+            require(bytes.size == 32) {
+                "Seed fingerprint must contain 32 bytes"
+            }
+        }
+    }
+
+    private fun ByteArray.readUInt32Le(offset: Int): UInt {
+        require(size >= offset + 4)
+
+        return (this[offset].toUInt() and 0xffu) or
+                ((this[offset + 1].toUInt() and 0xffu) shl 8) or
+                ((this[offset + 2].toUInt() and 0xffu) shl 16) or
+                ((this[offset + 3].toUInt() and 0xffu) shl 24)
+    }
+
+    private fun logRawTransactionBranchId(
+        rawTransactionBytes: ByteArray,
+    ) {
+        //val rawTransaction = rawTransactionHex.hexToByteArray()
+        val branchId = rawTransactionBytes.readUInt32Le(offset = 8)
+
+        Log.d("ZcashAdapter", "Raw transaction branch ID: 0x${branchId.toString(16)}")
+    }
+
+    fun printPcztChunks(
+        pcztHex: String,
+        chunkSize: Int = 3000
+    ) {
+        val chunks = pcztHex.chunked(chunkSize)
+        Log.d("ZcashAdapter", "BEGIN PCZT length=${pcztHex.length} chunks=${chunks.size}")
+        chunks.forEachIndexed { index, chunk ->
+            Log.d("ZcashAdapter", "CHUNK[$index]=$chunk")
+        }
+        Log.d("ZcashAdapter", "END PCZT")
+    }
+
+
+    override suspend fun sendRawTransaction(
+        pcztHex: String,
+        logger: AppLogger
+    ) {
+        Log.d("ZcashAdapter", "Finalizing signed Zcash PCZT: ${pcztHex.length} hex characters")
+        val pendingPczt = checkNotNull(pendingPcztWithProofs) {
+            "Pending PCZT missing"
+        }
+//        logRawTransactionBranchId(pcztWithProofs.toByteArray())
+
+        try {
+            val signedPcztBytes = decodePcztHex(pcztHex)
+            val pcztWithSignatures = Pczt(signedPcztBytes)
+
+            printPcztChunks(pcztHex)
+
+
+            val pcztWithProofs = synchronizer.addProofsToPczt(
+                pendingPczt
+            )
+
+            Log.d("ZcashAdapter", "Finalizing signed PCZT: signatures=${signedPcztBytes.size} bytes, " +
+                    "proofs=${pcztWithProofs.toByteArray().size} bytes"
+            )
+
+            val result = synchronizer.createTransactionFromPczt(
+                pcztWithProofs = pcztWithProofs,
+                pcztWithSignatures = pcztWithSignatures
+            ).first()
+
+            // Once a result is emitted, the transaction has already been created
+            // and stored by the SDK, even if network submission failed.
+            pendingPcztWithProofs = null
+
+            when (result) {
+                is TransactionSubmitResult.Success -> {
+                    Log.e(
+                        "ZcashAdapter",
+                        "Transaction submitted successfully: txId=${result.txIdString()}"
+                    )
+                    logger.info(
+                        "Zcash transaction submitted: ${result.txIdString()}"
+                    )
+                }
+
+                is TransactionSubmitResult.Failure -> {
+                    Log.e(
+                        "ZcashAdapter",
+                        "Transaction submission failed: code=${result.code}, grpcError=${result.grpcError}, description=${result.description ?: "None"}, txId=${result.txIdString()}"
+                    )
+                    throw IllegalStateException(
+                        buildString {
+                            append("Zcash transaction submission failed")
+                            append(": code=${result.code}")
+                            append(", grpcError=${result.grpcError}")
+
+                            result.description?.let {
+                                append(", description=$it")
+                            }
+
+                            append(", txId=${result.txIdString()}")
+                        }
+                    )
+                }
+
+                is TransactionSubmitResult.NotAttempted -> {
+                    Log.e(
+                        "ZcashAdapter",
+                        "Transaction was created but not submitted: txId=${result.txIdString()}"
+                    )
+                    throw IllegalStateException(
+                        "Zcash transaction was created but not submitted: " +
+                                result.txIdString()
+                    )
+                }
+            }
+        } catch (error: Throwable) {
+            Log.e("ZcashAdapter", "Error sending raw transaction: ${error.message}")
+            throw error
+        }
+    }
+
+    override suspend fun getUnsignedTransaction(
+        amount: BigDecimal,
+        address: String,
+        memo: String,
+        logger: AppLogger
+    ): String = pcztMutex.withLock {
+        val proposal = synchronizer.proposeTransfer(
+            account = zcashAccount,
+            recipient = address,
+            amount = amount.toZatoshiExact(),
+            memo = memo
+        )
+
+        createUnsignedHardwareTransaction(proposal)
+    }
+
+    suspend fun getUnsignedShieldTransaction(): String = pcztMutex.withLock {
+        val proposal = shieldProposal()
+            ?: throw IllegalStateException("Couldn't create shield proposal")
+
+        createUnsignedHardwareTransaction(proposal)
+    }
+
+    private suspend fun createUnsignedHardwareTransaction(proposal: Proposal): String {
+        val hardwareAccount = checkNotNull(hardwareAccountType) {
+            "Hardware signing requires a Zcash hardware account"
+        }
+
+        require(proposal.transactionCount() == 1) {
+            "Hardware signing does not support multi-step proposals"
+        }
+
+        val createdPczt = synchronizer.createPcztFromProposal(
+            accountUuid = zcashAccount.accountUuid,
+            proposal = proposal
+        )
+
+        printPcztChunks(createdPczt.toByteArray().toHex())
+
+        val requiresSaplingProofs =
+            synchronizer.pcztRequiresSaplingProofs(createdPczt)
+
+        val pcztWithProofs = if (requiresSaplingProofs) {
+            val externalNsk =
+                hardwareAccount.externalNsk.toNskBytes("External nsk")
+            val internalNsk =
+                hardwareAccount.internalNsk.toNskBytes("Internal nsk")
+
+            try {
+                val pcztWithKeys =
+                    synchronizer.addSaplingProofGenerationKeys(
+                        pczt = createdPczt,
+                        ufvk = UnifiedFullViewingKey(hardwareAccount.ufvk),
+                        externalNsk = SaplingNsk.new(externalNsk),
+                        internalNsk = SaplingNsk.new(internalNsk)
+                    )
+
+                synchronizer.addProofsToPczt(pcztWithKeys)
+            } finally {
+                externalNsk.fill(0)
+                internalNsk.fill(0)
+            }
+        } else {
+            createdPczt
+        }
+
+        printPcztChunks(pcztWithProofs.toByteArray().toHex())
+
+        pendingPcztWithProofs = pcztWithProofs
+
+        val pcztForSigner =
+            synchronizer.redactPcztForSigner(pcztWithProofs)
+
+        printPcztChunks(pcztForSigner.toByteArray().toHex())
+
+        return pcztForSigner.toByteArray().toHex()
+    }
+
+//    override suspend fun getUnsignedTransaction(
+//        amount: BigDecimal,
+//        address: String,
+//        memo: String,
+//        logger: AppLogger
+//    ): String = pcztMutex.withLock {
+//        val proposal = synchronizer.proposeTransfer(
+//            account = zcashAccount,
+//            recipient = address,
+//            amount = amount.toZatoshiExact(),
+//            memo = memo
+//        )
+//
+//        require(proposal.transactionCount() == 1) {
+//            "Hardware signing does not support multi-step proposals"
+//        }
+//
+//        val createdPczt = synchronizer.createPcztFromProposal(
+//            accountUuid = zcashAccount.accountUuid,
+//            proposal = proposal
+//        )
+//
+//        val pczt = if (synchronizer.pcztRequiresSaplingProofs(createdPczt)) {
+//            synchronizer.addProofsToPczt(createdPczt)
+//        } else {
+//            createdPczt
+//        }
+////        pendingPcztWithProofs = synchronizer.addProofsToPczt(
+////            pczt.clonePczt()
+////        )
+//        pendingPcztWithProofs = pczt
+//
+//        val pcztForSigner = synchronizer.redactPcztForSigner(pczt)
+//
+//        pcztForSigner.toByteArray().toHex()
+//    }
+
+    override suspend fun submitHardwareSignedTransaction(signedPayload: ByteArray) =
+        pcztMutex.withLock {
+            val originalPczt = pendingPcztWithProofs
+                ?: throw IllegalStateException("No pending hardware wallet transaction")
+            try {
+                val results = synchronizer.createTransactionFromPczt(
+                    originalPczt,
+                    Pczt(signedPayload.copyOf()),
+                ).toList()
+                results.forEach { result ->
+                    when (result) {
+                        is TransactionSubmitResult.Success -> Unit
+                        is TransactionSubmitResult.Failure -> throw IllegalStateException(
+                            "Transaction submission failed: ${result.description ?: result.grpcError}",
+                        )
+                        is TransactionSubmitResult.NotAttempted -> throw IllegalStateException(
+                            "Transaction was not submitted: ${result.txIdString()}",
+                        )
+                    }
+                }
+            } finally {
+                pendingPcztWithProofs = null
+                signedPayload.fill(0)
+            }
+        }
+
+    override fun clearHardwareSigningRequest() {
+        pendingPcztWithProofs = null
+    }
+
+    private fun decodePcztHex(payload: String): ByteArray {
+        var hex = payload.trim()
+
+        // Also accept the transport form: "pczt 0x..."
+        if (hex.startsWith("pczt ", ignoreCase = true)) {
+            hex = hex.substring(5).trim()
+        }
+
+        if (hex.startsWith("0x", ignoreCase = true)) {
+            hex = hex.substring(2)
+        }
+
+        hex = hex.filterNot { it.isWhitespace() }
+
+        require(hex.isNotEmpty()) {
+            "Signed PCZT is empty"
+        }
+        require(hex.length % 2 == 0) {
+            "Signed PCZT contains an odd number of hex characters"
+        }
+        require(hex.all { it.digitToIntOrNull(16) != null }) {
+            "Signed PCZT contains invalid hex characters"
+        }
+
+        val bytes = ByteArray(hex.length / 2) { index ->
+            val high = hex[index * 2].digitToInt(16)
+            val low = hex[index * 2 + 1].digitToInt(16)
+            ((high shl 4) or low).toByte()
+        }
+
+        require(
+            bytes.size >= 4 &&
+                    bytes[0] == 'P'.code.toByte() &&
+                    bytes[1] == 'C'.code.toByte() &&
+                    bytes[2] == 'Z'.code.toByte() &&
+                    bytes[3] == 'T'.code.toByte()
+        ) {
+            "Input is not a serialized PCZT"
+        }
+
+        return bytes
     }
 
     override val debugInfo: String
@@ -194,7 +724,7 @@ class ZcashAdapter(
         get() = balanceUpdatedSubject.toFlowable(BackpressureStrategy.BUFFER)
 
     override val explorerTitle: String
-        get() = "blockchair.com"
+        get() = "zcashexplorer.app"
 
     override val transactionsState: AdapterState
         get() = syncState
@@ -242,8 +772,14 @@ class ZcashAdapter(
             }
     }
 
-    override fun getTransactionUrl(transactionHash: String): String =
-        "https://blockchair.com/zcash/transaction/$transactionHash"
+    override fun getTransactionUrl(transactionHash: String): String {
+        val prefix = if (network == ZcashNetwork.Testnet) {
+            "testnet"
+        } else {
+            "mainnet"
+        }
+        return "https://$prefix.zcashexplorer.app/transactions/$transactionHash"
+    }
 
     override val availableBalance: BigDecimal
         get() = balanceAvailable
@@ -293,7 +829,28 @@ class ZcashAdapter(
     )
 
     private suspend fun send(proposal: Proposal) {
-        val spendingKey = DerivationTool.getInstance().deriveUnifiedSpendingKey(seed, network, Zip32AccountIndex.new(0))
+        when (val type = accountType) {
+            is AccountType.Mnemonic -> sendWithMnemonic(proposal, type)
+            is AccountType.ZcashHardware -> sendWithHardwareWallet(proposal)
+            else -> throw UnsupportedAccountException()
+        }
+    }
+
+    private suspend fun sendWithHardwareWallet(proposal: Proposal) {
+        // 1. Create PCZT from the proposal.
+        // 2. Add Sapling/Orchard proofs on the phone.
+        // 3. Redact data that the signer does not need.
+        // 4. Send PCZT to the hardware wallet.
+        // 5. Receive signed PCZT.
+        // 6. Finalize and broadcast it through the SDK.
+
+        throw UnsupportedOperationException(
+            "Hardware wallet PCZT signing is not connected yet"
+        )
+    }
+
+    private suspend fun sendWithMnemonic(proposal: Proposal, accountType: AccountType.Mnemonic) {
+        val spendingKey = DerivationTool.getInstance().deriveUnifiedSpendingKey(accountType.seed, network, Zip32AccountIndex.new(0))
 
         try {
             val results = synchronizer.createProposedTransactions(proposal, spendingKey).toList()
@@ -343,10 +900,24 @@ class ZcashAdapter(
         //       related viewModelScope instead of the synchronizer's scope.
         //       synchronizer.coroutineScope cannot be accessed until the synchronizer is started
         val scope = synchronizer.coroutineScope
-        synchronizer.allTransactions.collectWith(scope, transactionsProvider::onTransactions)
+        scope.launch {
+            synchronizer.allTransactions.collect { transactionOverviews ->
+                runCatching {
+                    transactionsProvider.onTransactions(transactionOverviews)
+                }.onFailure { error ->
+                    Log.e(
+                        "ZcashAdapter",
+                        "Failed to process transaction snapshot",
+                        error
+                    )
+                }
+            }
+        }
         synchronizer.status.collectWith(scope, ::onStatus)
         synchronizer.progress.collectWith(scope, ::onDownloadProgress)
-        synchronizer.walletBalances.mapNotNull { it?.get(zcashAccount.accountUuid) }.collectWith(scope, ::onBalance)
+        synchronizer.walletBalances
+            .mapNotNull { it?.get(zcashAccount.accountUuid) }
+            .collectWith(scope, ::onBalance)
         synchronizer.processorInfo.collectWith(scope, ::onProcessorInfo)
     }
 
@@ -497,7 +1068,7 @@ object ZcashAddressValidator {
 }
 
 val AccountBalance.available: Zatoshi
-    get() = this.sapling.available + this.orchard.available
+    get() = this.sapling.available + this.orchard.available + this.ironwood.available
 
 val AccountBalance.pending: Zatoshi
-    get() = this.sapling.pending + this.orchard.pending
+    get() = this.sapling.pending + this.orchard.pending + this.ironwood.pending

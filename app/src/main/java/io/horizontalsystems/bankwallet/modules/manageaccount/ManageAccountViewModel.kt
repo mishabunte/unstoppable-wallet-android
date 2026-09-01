@@ -126,6 +126,7 @@ class ManageAccountViewModel(
             is AccountType.SolanaAddressHardware -> listOf()
             is AccountType.StellarAddressHardware -> listOf()
             is AccountType.TronAddressHardware -> listOf()
+            is AccountType.ZcashHardware -> listOf()
             is AccountType.HdExtendedKeyHardware -> {
                 if (account.type.hdExtendedKey.isPublic) {
                     listOf(KeyAction.PublicKeys)

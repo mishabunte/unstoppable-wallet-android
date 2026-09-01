@@ -15,6 +15,8 @@ import io.horizontalsystems.hdwalletkit.Mnemonic
 import io.horizontalsystems.hdwalletkit.WordList
 import io.horizontalsystems.marketkit.models.BlockchainType
 import io.horizontalsystems.marketkit.models.TokenType
+import cash.z.ecc.android.sdk.model.ZcashNetwork
+import cash.z.ecc.android.sdk.tool.DerivationTool
 import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
 import java.math.BigInteger
@@ -45,6 +47,7 @@ data class Account(
             is AccountType.SolanaAddressHardware -> true
             is AccountType.StellarAddressHardware -> true
             is AccountType.TronAddressHardware -> true
+            is AccountType.ZcashHardware -> true
             is AccountType.HdExtendedKeyHardware -> this.type.hdExtendedKey.isPublic
             else -> false
         }
@@ -151,6 +154,160 @@ sealed class AccountType : Parcelable {
 
     @Parcelize
     data class SolanaAddressHardware(val address: String) : AccountType()
+
+    @Parcelize
+    data class ZcashHardware(
+        val ufvk: String,
+        val unifiedAddress: String,
+        val seedFingerprint: String,
+        val accountIndex: Long,
+        val externalNsk: String,
+        val internalNsk: String,
+        val isTestNet: Boolean
+    ) : AccountType() {
+
+        init {
+            require(ufvk.isNotBlank()) {
+                "UFVK must not be blank"
+            }
+
+            require(unifiedAddress.isNotBlank()) {
+                "Unified address must not be blank"
+            }
+
+            require(isHex32(seedFingerprint)) {
+                "Seed fingerprint must contain 32 bytes encoded as hex"
+            }
+
+            require(isHex32(externalNsk)) {
+                "External nsk must contain 32 bytes encoded as hex"
+            }
+
+            require(isHex32(internalNsk)) {
+                "Internal nsk must contain 32 bytes encoded as hex"
+            }
+
+            require(accountIndex in 0..MAX_ACCOUNT_INDEX) {
+                "Account index must be a valid hardened ZIP-32 index"
+            }
+        }
+
+        val serialized: String
+            get() = listOf(
+                STORAGE_VERSION,
+                ufvk,
+                unifiedAddress,
+                seedFingerprint.lowercase(),
+                accountIndex.toString(),
+                externalNsk.lowercase(),
+                internalNsk.lowercase(),
+                if (isTestNet) "1" else "0"
+            ).joinToString("|")
+
+        companion object {
+            private const val STORAGE_VERSION = "hito-zcash-v2"
+
+            private const val MAINNET_COIN_TYPE = 133L
+            private const val TESTNET_COIN_TYPE = 1L
+            private const val MAX_ACCOUNT_INDEX = 0x7FFF_FFFFL
+
+            private val HEX_32_REGEX = Regex("^[0-9a-fA-F]{64}$")
+
+            private fun isHex32(value: String): Boolean =
+                HEX_32_REGEX.matches(value)
+
+            fun decodeHitoPayload(payload: String): List<String> {
+                val parts = payload.split('|')
+
+                require(parts.size == 7) {
+                    "Invalid Zcash pairing payload"
+                }
+
+                require(parts[0] == "hito-zcash-v2") {
+                    "Unsupported Zcash pairing payload version"
+                }
+
+                val coinType = parts[1].toLong()
+
+                require(coinType == MAINNET_COIN_TYPE || coinType == TESTNET_COIN_TYPE) {
+                    "Unsupported Zcash coin type: $coinType"
+                }
+
+                return parts
+            }
+
+            fun partsFromSerialized(serialized: String): List<String> {
+                val parts = serialized.split('|')
+
+                require(parts.size == 8) {
+                    "Invalid serialized ZcashHardware"
+                }
+
+                require(parts[0] == STORAGE_VERSION) {
+                    "Unsupported ZcashHardware version: ${parts[0]}"
+                }
+
+                return parts
+            }
+
+            fun fromSerialized(serialized: String): ZcashHardware {
+                val parts: List<String> = partsFromSerialized(serialized)
+
+                val isTestNet = when (parts[7]) {
+                    "0" -> false
+                    "1" -> true
+                    else -> throw IllegalArgumentException(
+                        "Invalid Zcash network flag"
+                    )
+                }
+
+                return ZcashHardware(
+                    ufvk = parts[1],
+                    unifiedAddress = parts[2],
+                    seedFingerprint = parts[3],
+                    accountIndex = parts[4].toLong(),
+                    externalNsk = parts[5],
+                    internalNsk = parts[6],
+                    isTestNet = isTestNet
+                )
+            }
+
+            fun fromPairingPayload(
+                payload: String,
+                unifiedAddress: String = ""
+            ): ZcashHardware {
+                val parts = payload.split('|')
+
+                require(parts.size == 7) {
+                    "Invalid Zcash pairing payload"
+                }
+
+                require(parts[0] == "hito-zcash-v2") {
+                    "Unsupported Zcash pairing payload version"
+                }
+
+                val coinType = parts[1].toLong()
+
+                val isTestNet = when (coinType) {
+                    MAINNET_COIN_TYPE -> false
+                    TESTNET_COIN_TYPE -> true
+                    else -> throw IllegalArgumentException(
+                        "Unsupported Zcash coin type: $coinType"
+                    )
+                }
+
+                return ZcashHardware(
+                    ufvk = parts[2],
+                    unifiedAddress = unifiedAddress,
+                    seedFingerprint = parts[3],
+                    accountIndex = parts[4].toLong(),
+                    externalNsk = parts[5],
+                    internalNsk = parts[6],
+                    isTestNet = isTestNet
+                )
+            }
+        }
+    }
 
     @Parcelize
     data class StellarAddressHardware(val address: String) : AccountType()
@@ -320,6 +477,7 @@ sealed class AccountType : Parcelable {
             is StellarAddress -> "Stellar Address"
             is EvmPrivateKey -> "EVM Private Key"
             is StellarSecretKey -> "Stellar Secret Key"
+            is ZcashHardware -> "Zcash UFVK Hardware"
             is HdExtendedKey -> {
                 when (this.hdExtendedKey.derivedType) {
                     HDExtendedKey.DerivedType.Master -> "BIP32 Root Key"
@@ -370,6 +528,7 @@ sealed class AccountType : Parcelable {
     val detailedDescription: String
         get() = when (this) {
             is EvmAddress -> this.address.shorten()
+            is ZcashHardware -> this.unifiedAddress.shorten()
             is SolanaAddress -> this.address.shorten()
             is TronAddress -> this.address.shorten()
             is EvmAddressHardware -> this.address.shorten()
@@ -417,6 +576,15 @@ sealed class AccountType : Parcelable {
         is SolanaAddress -> address
         is SolanaAddressHardware -> address
         else -> null
+    }
+
+    suspend fun unifiedZcashAddress(network: ZcashNetwork): String? {
+        return when (this) {
+            is ZcashHardware ->
+                DerivationTool.getInstance().deriveUnifiedAddress(ufvk, network)
+
+            else -> null
+        }
     }
 
     fun stellarAddress() = when (this) {

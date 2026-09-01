@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -28,6 +29,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -64,6 +66,9 @@ import io.horizontalsystems.bankwallet.ui.compose.components.body_leah
 import io.horizontalsystems.bankwallet.ui.compose.components.subhead2_grey
 import io.horizontalsystems.bankwallet.ui.compose.components.title3_leah
 import io.horizontalsystems.bankwallet.ui.helpers.TextHelper
+import org.bitcoinppl.bbqr.ContinuousJoinResult
+import org.bitcoinppl.bbqr.ContinuousJoiner
+import org.bitcoinppl.bbqr.FileType
 
 class QRScannerActivity : BaseActivity() {
 
@@ -80,7 +85,18 @@ class QRScannerActivity : BaseActivity() {
         }
     }
 
-    private fun onScan(address: String?) {
+    private fun onScan(scanResult: ScanResult) {
+        when (scanResult) {
+            is ScanResult.Text -> onScanText(scanResult.value)
+            is ScanResult.Bbqr -> {
+                Log.d("QRScannerActivity", "onScan: BBQr data received, length=${scanResult.data.size}, fileType=${scanResult.fileType}, data=${scanResult.data.joinToString(",")}")
+                val text = String(scanResult.data, Charsets.UTF_8)
+                onScanText(text)
+            }
+        }
+    }
+
+    private fun onScanText(address: String?) {
         setResult(RESULT_OK, Intent().apply {
             putExtra(ModuleField.SCAN_ADDRESS, address)
         })
@@ -120,11 +136,14 @@ class QRScannerActivity : BaseActivity() {
 @Composable
 private fun QRScannerScreen(
     showPasteButton: Boolean,
-    onScan: (String) -> Unit,
+    onScan: (ScanResult) -> Unit,
     onCloseClick: () -> Unit,
     onCameraPermissionSettingsClick: () -> Unit
 ) {
     val cameraPermissionState = rememberPermissionState(Manifest.permission.CAMERA)
+    var scanProgress by remember {
+        mutableStateOf<Pair<Int, Int>?>(null)
+    }
     var showPermissionNeededDialog by remember { mutableStateOf(cameraPermissionState.status != PermissionStatus.Granted) }
 
     if (showPermissionNeededDialog) {
@@ -147,13 +166,19 @@ private fun QRScannerScreen(
             contentAlignment = Alignment.Center
         ) {
             if (cameraPermissionState.status == PermissionStatus.Granted) {
-                ScannerView(onScan)
+                ScannerView(
+                    onScan = onScan,
+                    onProgress = { received, total ->
+                        scanProgress = received to total
+                    }
+                )
             } else {
                 Spacer(
-                    Modifier
+                    modifier = Modifier
                         .fillMaxSize()
                         .background(color = ComposeAppTheme.colors.dark)
                 )
+
                 GoToSettingsBox(onCameraPermissionSettingsClick)
             }
 
@@ -168,7 +193,23 @@ private fun QRScannerScreen(
                     ButtonPrimaryYellow(
                         modifier = Modifier.fillMaxWidth(),
                         title = stringResource(R.string.Send_Button_Paste),
-                        onClick = { onScan(TextHelper.getCopiedText()) }
+                        onClick = {
+                            onScan(
+                                ScanResult.Text(
+                                    TextHelper.getCopiedText()
+                                )
+                            )
+                        }
+                    )
+                    Spacer(Modifier.height(16.dp))
+                }
+                if (scanProgress != null) {
+                    val (received, total) = scanProgress!!
+                    Text(
+                        text = "Received ${received} of ${total} parts",
+                        maxLines = 1,
+                        color = Bright,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Spacer(Modifier.height(16.dp))
                 }
@@ -196,26 +237,90 @@ private fun QRScannerScreen(
     }
 }
 
+private sealed interface ScanResult {
+    data class Text(val value: String) : ScanResult
+
+    data class Bbqr(
+        val data: ByteArray,
+        val fileType: FileType
+    ) : ScanResult
+}
+
 @Composable
-private fun ScannerView(onScan: (String) -> Unit) {
+private fun ScannerView(
+    onScan: (ScanResult) -> Unit,
+    onProgress: (received: Int, total: Int) -> Unit
+) {
     val context = LocalContext.current
+    val joiner = remember { ContinuousJoiner() }
+    val receivedParts = remember { mutableSetOf<String>() }
+    var completed by remember { mutableStateOf(false) }
+
     val barcodeView = remember {
         CompoundBarcodeView(context).apply {
-            this.initializeFromIntent((context as Activity).intent)
-            this.setStatusText("")
-            this.decodeSingle { result ->
-                result.text?.let { barCodeOrQr ->
-                    onScan.invoke(barCodeOrQr)
+            initializeFromIntent((context as Activity).intent)
+            setStatusText("")
+
+            decodeContinuous { result ->
+                val text = result.text ?: return@decodeContinuous
+
+                if (completed) {
+                    return@decodeContinuous
+                }
+
+                if (!text.startsWith("B$")) {
+                    completed = true
+                    onScan(ScanResult.Text(text))
+                    return@decodeContinuous
+                }
+
+                // ZXing will repeatedly report the same visible frame.
+                if (!receivedParts.add(text)) {
+                    return@decodeContinuous
+                }
+
+                try {
+                    when (val state = joiner.addPart(text)) {
+                        ContinuousJoinResult.NotStarted -> Unit
+
+                        is ContinuousJoinResult.InProgress -> {
+                            val received = receivedParts.size
+                            val total = received + state.partsLeft.toInt()
+                            onProgress(received, total)
+                        }
+
+                        is ContinuousJoinResult.Complete -> {
+                            completed = true
+
+                            onScan(
+                                ScanResult.Bbqr(
+                                    data = state.joined.data(),
+                                    fileType = state.joined.fileType()
+                                )
+                            )
+                        }
+                    }
+                } catch (error: Exception) {
+                    // Show an error or reset the current BBQr session.
+                    receivedParts.clear()
                 }
             }
         }
     }
+
     AndroidView(factory = { barcodeView })
+
     LifecycleResumeEffect(Unit) {
         barcodeView.resume()
 
         onPauseOrDispose {
             barcodeView.pause()
+        }
+    }
+
+    DisposableEffect(joiner) {
+        onDispose {
+            joiner.close()
         }
     }
 }

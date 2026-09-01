@@ -376,6 +376,8 @@ fun BlockchainType.supports(accountType: AccountType): Boolean {
         }
         is AccountType.SolanaAddress, is AccountType.SolanaAddressHardware ->
             this == BlockchainType.Solana
+        is AccountType.ZcashHardware ->
+            this == BlockchainType.Zcash
 
         is AccountType.TronAddress, is AccountType.TronAddressHardware ->
             this == BlockchainType.Tron

@@ -448,6 +448,10 @@
     <string name="Send_Confirmation_Nonce" translatable="false">Nonce</string>
     <string name="Send_Confirmation_HintMemo" translatable="false">Memo</string>
     <string name="Send_Confirmation_Send_Button">Send</string>
+    <string name="Send_Confirmation_Send_Button_HardwareNFC">Send via NFC</string>
+    <string name="Send_Confirmation_Send_Button_HardwareBLE">Send via Bluetooth</string>
+    <string name="Send_Confirmation_Button_Switch_To_Bluetooth">Switch to Bluetooth</string>
+    <string name="Send_Confirmation_Button_Switch_To_NFC">Switch to NFC</string>
     <string name="Send_Confirmation_Action">Action</string>
     <string name="Send_Processing">Processing!</string>
     <string name="Send_Processing_Description">Transaction sent successfully. Check its status for details.</string>
@@ -1330,13 +1334,22 @@
     <string name="HardwareWalletImport_ErrorResponse" translatable="false">Hito returned an unexpected response. The phrase was cleared and was not treated as imported.</string>
     <string name="HardwareWalletImport_ErrorTransfer" translatable="false">The recovery phrase could not be transferred. It was cleared; reconnect before retrying.</string>
     <string name="Hardware_LinkBy_TypeEvmAddress" translatable="false">EVM Address</string>
+    <string name="Hardware_LinkBy_TypeZcash_Select" translatable="false">Select Network</string>
+    <string name="Hardware_LinkBy_TypeZcash_Mainnet" translatable="false">Zcash Mainnet</string>
+    <string name="Hardware_LinkBy_TypeZcash_Testnet" translatable="false">Zcash Testnet</string>
+    <string name="HardwareWallet_Zcash_Network" translatable="false">Network</string>
+    <string name="HardwareWallet_Zcash_AccountIndex" translatable="false">Account Index</string>
+    <string name="HardwareWallet_Zcash_InvalidAccountIndex" translatable="false">Enter an account index from 0 to 2147483647</string>
     <string name="Hardware_LinkBy_TypeStellarAddress" translatable="false">Stellar Address</string>
+    <string name="Hardware_LinkBy_TypeZcashKey" translatable="false">Zcash Unified Full Viewing Key</string>
     <string name="Hardware_LinkBy_TypeSolanaAddress" translatable="false">Solana Address</string>
     <string name="Hardware_LinkBy_TypeTronAddress" translatable="false">Tron Address</string>
     <string name="Hardware_LinkBy_TypeXPubKey" translatable="false">Account xPubKey</string>
     <string name="Hardware_LinkBy_TypeEvmAddress_Subtitle" translatable="false">(Ethereum, Binance, …)</string>
     <string name="Hardware_LinkBy_TypeSolanaAddress_Subtitle" translatable="false">(SOL, Solana tokens, …)</string>
     <string name="Hardware_LinkBy_TypeStellarAddress_Subtitle" translatable="false">(XLM, Stellar tokens, …)</string>
+    <string name="Hardware_LinkBy_TypeZcashKey_Subtitle" translatable="false">(ZEC...)</string>
+    <string name="Hardware_Error_InvalidZcashUfvk" translatable="false">Invalid Zcash Unified Full Viewing Key</string>
     <string name="Hardware_LinkBy_TypeTronAddress_Subtitle" translatable="false">(TRX, Tron tokens, …)</string>
     <string name="Hardware_LinkBy_TypeXPubKey_Subtitle" translatable="false">(Bitcoin, Litecoin, …)</string>
 

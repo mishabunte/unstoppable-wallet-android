@@ -22,6 +22,7 @@ object BackupLocalModule {
     private const val ADDRESS_HARDWARE = "address_hardware"
     private const val SOLANA_ADDRESS_HARDWARE = "solana_address_hardware"
     private const val TRON_ADDRESS_HARDWARE = "tron_address_hardware"
+    private const val ZCASH_KEY_HARDWARE = "zcash_key_hardware"
     private const val HD_EXTENDED_LEY_HARDWARE = "hd_extended_key_hardware"
     private const val STELLAR_ADDRESS_HARDWARE = "stellar_address_hardware"
     private const val CEX = "cex"
@@ -89,6 +90,7 @@ object BackupLocalModule {
         is AccountType.StellarAddressHardware -> STELLAR_ADDRESS_HARDWARE
         is AccountType.SolanaAddressHardware -> SOLANA_ADDRESS_HARDWARE
         is AccountType.TronAddressHardware -> TRON_ADDRESS_HARDWARE
+        is AccountType.ZcashHardware -> ZCASH_KEY_HARDWARE
         is AccountType.HdExtendedKeyHardware -> HD_EXTENDED_LEY_HARDWARE
         is AccountType.Cex -> CEX
     }
@@ -109,6 +111,15 @@ object BackupLocalModule {
             PRIVATE_KEY -> AccountType.EvmPrivateKey(data.toBigInteger())
             SECRET_KEY -> AccountType.StellarSecretKey(String(data, Charsets.UTF_8))
             ADDRESS -> AccountType.EvmAddress(String(data, Charsets.UTF_8))
+            ZCASH_KEY_HARDWARE -> AccountType.ZcashHardware(
+                ufvk = String(data, Charsets.UTF_8),
+                unifiedAddress = "",
+                seedFingerprint = "",
+                externalNsk = "",
+                internalNsk = "",
+                accountIndex = 0L,
+                isTestNet = false
+            )
             SOLANA_ADDRESS -> AccountType.SolanaAddress(String(data, Charsets.UTF_8))
             TRON_ADDRESS -> AccountType.TronAddress(String(data, Charsets.UTF_8))
             TON_ADDRESS -> AccountType.TonAddress(String(data, Charsets.UTF_8))
@@ -155,6 +166,7 @@ object BackupLocalModule {
         is AccountType.BitcoinAddress -> accountType.serialized.toByteArray(Charsets.UTF_8)
         is AccountType.HdExtendedKey -> Base58.decode(accountType.keySerialized)
         is AccountType.EvmAddressHardware -> accountType.address.toByteArray(Charsets.UTF_8)
+        is AccountType.ZcashHardware -> accountType.unifiedAddress.toByteArray(Charsets.UTF_8)
         is AccountType.SolanaAddressHardware -> accountType.address.toByteArray(Charsets.UTF_8)
         is AccountType.TronAddressHardware -> accountType.address.toByteArray(Charsets.UTF_8)
         is AccountType.HdExtendedKeyHardware -> Base58.decode(accountType.keySerialized)
