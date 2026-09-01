@@ -1,4 +1,4 @@
-package io.horizontalsystems.bankwallet.modules.hardwarewallet.firmwareupgrade.ble
+package io.horizontalsystems.bankwallet.modules.hardwarewallet.ble
 
 import android.Manifest
 import android.bluetooth.*
@@ -6,8 +6,10 @@ import android.content.Context
 import android.util.Log
 import androidx.annotation.RequiresPermission
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
@@ -16,10 +18,10 @@ import no.nordicsemi.android.ble.data.Data
 import no.nordicsemi.android.ble.ktx.state.ConnectionState
 import no.nordicsemi.android.ble.ktx.stateAsFlow
 import no.nordicsemi.android.ble.ktx.suspend
-import timber.log.Timber
 import java.util.*
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Android port of your iOS BluetoothController tailored for Hito devices.
@@ -46,6 +48,8 @@ interface IHitoBle {
      * Connects to the device.
      */
     suspend fun sendPayload(payload: ByteArray)
+
+    suspend fun receivePayload(timeoutMillis: Long): ByteArray
 
     /**
      * Requests the device version information.
@@ -105,7 +109,7 @@ object HitoSpec {
 class HitoBleManager (
     context: Context,
     device: BluetoothDevice
-): IHitoBle by HitoBleManagerImpl(context, device)
+): IHitoBle by HitoBleManagerImpl(context.applicationContext, device)
 
 private class HitoBleManagerImpl(
     context: Context,
@@ -115,8 +119,8 @@ private class HitoBleManagerImpl(
 
     private var txChar: BluetoothGattCharacteristic? = null
 
-    private val _incoming = MutableSharedFlow<ByteArray>(extraBufferCapacity = 64)
-    val incoming: SharedFlow<ByteArray> = _incoming.asSharedFlow()
+    private val controlIncoming = Channel<ByteArray>(Channel.UNLIMITED)
+    private val payloadIncoming = Channel<ByteArray>(Channel.UNLIMITED)
 
     private val _installationProgress = MutableStateFlow(-1.0)
     override val installationProgress: StateFlow<Double> = _installationProgress.asStateFlow()
@@ -142,31 +146,28 @@ private class HitoBleManagerImpl(
     }
 
     fun writeWithoutResponse(bytes: ByteArray) {
-        val c = txChar ?: return
-        Log.d("hito-ble", "Writing payload: ${bytes.decodeToString()}")
+        val c = txChar ?: throw BleException("BLE write characteristic is not available")
         writeCharacteristic(c, Data(bytes), BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE)
             .fail { _, status -> Log.w("hito-ble", "write failed: $status") }
             .enqueue()
     }
 
-    suspend fun writeAndAwaitAck(
+    private suspend fun writeAndAwaitResponse(
         payload: ByteArray,
-        ack: String = "ok",
         timeoutMs: Long = 10_000L
-    ): Boolean {
+    ): String? {
         return try {
             writeWithoutResponse(payload)
-            Log.d("hito-ble", "writeAndAwaitAck sent ${payload.size} bytes, waiting for ack='$ack'")
+            Log.d("hito-ble", "Sent ${payload.size} bytes, waiting for ok/done")
+
             withTimeout(timeoutMs) {
-                incoming.first {
-                    Log.d("hito-ble", "incoming: ${it.decodeToString()}")
-                    it.decodeToString() == ack
-                }
-                true
+                controlIncoming.receive().decodeToString()
             }
+        } catch (error: CancellationException) {
+            throw error
         } catch (e: Exception) {
-            Log.e("hito-ble", "writeAndAwaitAck failed: ${e.message}", e)
-            false
+            Log.e("hito-ble", "writeAndAwaitResponse failed: ${e.message}", e)
+            null
         }
     }
 
@@ -205,8 +206,11 @@ private class HitoBleManagerImpl(
         val c = txChar ?: return
         setNotificationCallback(c).with { _, data ->
             val bytes = data.value ?: return@with
-            Log.d("hito-ble", "Notification: ${bytes.decodeToString()}")
-            _incoming.tryEmit(bytes)
+            if (bytes.isTransportControlMessage()) {
+                controlIncoming.trySend(bytes)
+            } else {
+                payloadIncoming.trySend(bytes)
+            }
         }
         enableNotifications(c).enqueue()
     }
@@ -219,7 +223,7 @@ private class HitoBleManagerImpl(
 
         return withTimeoutOrNull(100_000L) { // 100 seconds timeout
             try {
-                val response = incoming.first()
+                val response = payloadIncoming.receive()
                 val responseString = response.decodeToString()
                 Log.d("hito-ble", "Device version response: $responseString")
 
@@ -253,6 +257,8 @@ private class HitoBleManagerImpl(
                 Log.d("hito-ble", "Bootloader version: $bootloaderVersion, Device version: $deviceVersion")
                 DeviceVersionInfo(bootloaderVersion, deviceVersion)
 
+            } catch (error: CancellationException) {
+                throw error
             } catch (e: Exception) {
                 Log.e("hito-ble", "Error while requesting device version", e)
                 null
@@ -265,38 +271,143 @@ private class HitoBleManagerImpl(
 
     override suspend fun sendPayload(payload: ByteArray) {
         _installationProgress.value = 0.0
-        val info = ByteArray(5)
+        val info = HitoBleUploadPackets.info(payload.size)
         val start = System.currentTimeMillis()
         val payloadSize = payload.size
-        // big-endian 32-bit length
-        info[0] = 0x69.toByte()
-        info[1] = (payloadSize and 0xFF).toByte()
-        info[2] = ((payloadSize shr 8) and 0xFF).toByte()
-        info[3] = ((payloadSize shr 16) and 0xFF).toByte()
-        info[4] = ((payloadSize shr 24) and 0xFF).toByte()
 
         // Send and await ack
-        if (!writeAndAwaitAck(info, ack = "ok", timeoutMs = 60_000L)) throw BleException("Device is not responding")
+        try {
+            when (writeAndAwaitResponse(info, timeoutMs = 60_000L)) {
+                "ok" -> Unit
+                "done" -> {
+                    _installationProgress.value = 1.0
+                    return
+                }
+                else -> throw BleException("Device is not responding")
+            }
+        } finally {
+            info.fill(0)
+        }
 
         val packetSize = max(1, maxWriteSize - 1) // 1 byte for 'd'
         for (i in 0 until payloadSize step packetSize) {
             val rest = payloadSize - i
 
-            var dataChunk = ByteArray(1 + min(packetSize, rest))
-            dataChunk[0] = 0x64.toByte() // 'd'
-            System.arraycopy(payload, i, dataChunk, 1, min(packetSize, rest))
-            if (!writeAndAwaitAck(dataChunk, ack = "ok", timeoutMs = if (rest > packetSize) 60_000L else 8_000L)) throw BleException("Device is not responding")
+            val dataChunk = HitoBleUploadPackets.data(payload, i, packetSize)
+            try {
+                when (writeAndAwaitResponse(dataChunk, timeoutMs = if (rest > packetSize) 180_000L else 8_000L)) {
+                    "ok" -> {
+                        _installationProgress.value = (i + min(packetSize, rest)).toDouble() / payloadSize.toDouble()
+                    }
+                    "done" -> {
+                        _installationProgress.value = 1.0
+                        Log.d("hito-ble", "Device reported done")
+                        return
+                    }
+                    else -> {
+                        throw BleException("Device stopped responding during transfer")
+                    }
+                }
+            } finally {
+                dataChunk.fill(0)
+            }
 
             _installationProgress.value = (i + min(packetSize, rest)).toDouble() / payloadSize.toDouble()
-            Log.d("hito-ble", "Progress: ${_installationProgress.value}")
+//            val response = incoming.first()
+//            val responseString = response.decodeToString()
+//            if (responseString != "ok" || responseString == "done") {
+//                return
+//            }
         }
         val end = System.currentTimeMillis()
         Log.d("hito-ble", "Upload complete, total bytes sent: $payloadSize, time taken: ${end - start}ms")
     }
 
+    private fun sendOkAck() {
+        writeWithoutResponse(
+            byteArrayOf(
+                'o'.code.toByte(),
+                'k'.code.toByte(),
+                '\n'.code.toByte()
+            )
+        )
+        Log.d(TAG, "Sent ACK: ok\\n")
+    }
+
+    override suspend fun receivePayload(timeoutMillis: Long): ByteArray =
+        withTimeout(timeoutMillis.milliseconds) {
+            val first = payloadIncoming.receive()
+
+            // Return packets that do not use the upload protocol.
+            if (first.size < 5 || first[0] != 0x69.toByte()) {
+                return@withTimeout first
+            }
+
+            // Payload size is encoded as little-endian u32.
+            val expectedSize =
+                (first[1].toInt() and 0xFF) or
+                        ((first[2].toInt() and 0xFF) shl 8) or
+                        ((first[3].toInt() and 0xFF) shl 16) or
+                        ((first[4].toInt() and 0xFF) shl 24)
+
+            if (expectedSize <= 0) {
+                throw BleException("Invalid response length: $expectedSize")
+            }
+
+            Log.d(TAG, "Receiving payload of $expectedSize bytes")
+
+            // Acknowledge the upload-info packet.
+            sendOkAck()
+
+            val result = ByteArray(expectedSize)
+            var offset = 0
+
+            while (offset < expectedSize) {
+                val packet = payloadIncoming.receive()
+
+                if (packet.isEmpty() || packet[0] != 0x64.toByte()) {
+                    throw BleException(
+                        "Expected data packet, received: ${packet.toHexString()}"
+                    )
+                }
+
+                val chunkSize = min(
+                    packet.size - 1,
+                    expectedSize - offset
+                )
+
+                if (chunkSize <= 0) {
+                    throw BleException("Received empty data packet")
+                }
+
+                packet.copyInto(
+                    destination = result,
+                    destinationOffset = offset,
+                    startIndex = 1,
+                    endIndex = 1 + chunkSize
+                )
+
+                offset += chunkSize
+
+                Log.d(TAG, "Received data chunk: $chunkSize bytes, progress: $offset/$expectedSize")
+
+                // Acknowledge this data packet.
+                sendOkAck()
+            }
+
+            result
+        }
+
+    private fun ByteArray.isTransportControlMessage(): Boolean {
+        val message = decodeToString()
+        return message == "ok" || message == "done"
+    }
+
     override fun release() {
         // Cancel all coroutines.
         scope.cancel()
+        controlIncoming.close()
+        payloadIncoming.close()
 
         val wasConnected = isReady
         // If the device wasn't connected, it means that ConnectRequest was still pending.
@@ -310,13 +421,11 @@ private class HitoBleManagerImpl(
     }
 
     override fun log(priority: Int, message: String) {
-        Timber.log(priority, message)
+        // Characteristic values can carry secrets, so library-provided BLE logs stay disabled.
     }
 
     override fun getMinLogPriority(): Int {
-        // By default, the library logs only INFO or
-        // higher priority messages. You may change it here.
-        return Log.VERBOSE
+        return Log.ASSERT
     }
 
     override fun isRequiredServiceSupported(gatt: BluetoothGatt): Boolean {
@@ -343,5 +452,28 @@ private class HitoBleManagerImpl(
 
     override fun onServicesInvalidated() {
         txChar = null
+    }
+}
+
+internal object HitoBleUploadPackets {
+    fun info(payloadSize: Int): ByteArray = byteArrayOf(
+        0x69.toByte(),
+        (payloadSize and 0xFF).toByte(),
+        ((payloadSize shr 8) and 0xFF).toByte(),
+        ((payloadSize shr 16) and 0xFF).toByte(),
+        ((payloadSize shr 24) and 0xFF).toByte(),
+    )
+
+    fun data(payload: ByteArray, offset: Int, packetSize: Int): ByteArray {
+        val chunkSize = min(packetSize, payload.size - offset)
+        val chunk = ByteArray(chunkSize + 1)
+        chunk[0] = 0x64.toByte()
+        payload.copyInto(
+            destination = chunk,
+            destinationOffset = 1,
+            startIndex = offset,
+            endIndex = offset + chunkSize,
+        )
+        return chunk
     }
 }

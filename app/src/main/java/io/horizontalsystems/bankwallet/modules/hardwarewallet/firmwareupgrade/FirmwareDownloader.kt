@@ -1,7 +1,7 @@
 package io.horizontalsystems.bankwallet.modules.hardwarewallet.firmwareupgrade
 
 import android.util.Log
-import io.horizontalsystems.bankwallet.modules.hardwarewallet.firmwareupgrade.ble.BootloaderVersion
+import io.horizontalsystems.bankwallet.modules.hardwarewallet.ble.BootloaderVersion
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

@@ -1,4 +1,4 @@
-package io.horizontalsystems.bankwallet.modules.hardwarewallet.firmwareupgrade.ble
+package io.horizontalsystems.bankwallet.modules.hardwarewallet.ble
 
 import android.Manifest
 import android.bluetooth.BluetoothDevice
@@ -81,6 +81,8 @@ sealed class ScanningState {
     data object Loading : ScanningState()
 
     data object TryAgain: ScanningState()
+
+    data object Finished: ScanningState()
 
     data class Error(val errorCode: Int) : ScanningState()
 

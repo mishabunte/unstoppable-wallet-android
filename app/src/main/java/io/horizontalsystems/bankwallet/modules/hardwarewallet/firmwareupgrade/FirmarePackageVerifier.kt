@@ -7,7 +7,7 @@ import java.nio.ByteOrder
 import java.security.MessageDigest
 import java.util.*
 import android.util.Base64
-import io.horizontalsystems.bankwallet.modules.hardwarewallet.firmwareupgrade.ble.BootloaderVersion
+import io.horizontalsystems.bankwallet.modules.hardwarewallet.ble.BootloaderVersion
 import android.util.Log
 import org.bouncycastle.asn1.ASN1InputStream
 import org.bouncycastle.asn1.ASN1Integer

@@ -1,4 +1,4 @@
-package io.horizontalsystems.bankwallet.modules.hardwarewallet.firmwareupgrade.ble
+package io.horizontalsystems.bankwallet.modules.hardwarewallet.ble
 
 import androidx.annotation.RequiresPermission
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,7 +15,7 @@ class HitoDevicesStore {
     @RequiresPermission(value = "android.permission.BLUETOOTH_CONNECT")
     fun addNewDevice(scanResult: ScanResult) {
         if (scanResult.device.name == null) return
-        if (!scanResult.device.name.startsWith("hito", true)) return
+        if (!scanResult.device.name.startsWith("Hito", true)) return
         val address = scanResult.device.address
         val updated = devices.indexOfFirst { it.address == address }
             .let { idx ->

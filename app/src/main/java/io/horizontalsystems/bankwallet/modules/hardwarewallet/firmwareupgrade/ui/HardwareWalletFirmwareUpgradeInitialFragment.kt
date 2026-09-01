@@ -25,6 +25,8 @@ import androidx.navigation.NavController
 import io.horizontalsystems.bankwallet.R
 import io.horizontalsystems.bankwallet.core.BaseComposeFragment
 import io.horizontalsystems.bankwallet.core.slideFromRight
+import io.horizontalsystems.bankwallet.modules.hardwarewallet.ble.HardwareWalletBleOperation
+import io.horizontalsystems.bankwallet.modules.hardwarewallet.ble.HardwareWalletSelectDeviceInput
 import io.horizontalsystems.bankwallet.ui.compose.ComposeAppTheme
 import io.horizontalsystems.bankwallet.ui.compose.components.AppBar
 import io.horizontalsystems.bankwallet.ui.compose.components.ButtonPrimaryDefault
@@ -119,7 +121,10 @@ private fun HardwareWalletFirmwareUpgradeInitialScreen(navController: NavControl
                         .padding(bottom = 48.dp, start = 32.dp, end = 32.dp),
                     title = "Start",
                     onClick = {
-                        navController?.slideFromRight(R.id.hardwareWalletSelectDeviceFragment)
+                        navController?.slideFromRight(
+                            R.id.hardwareWalletSelectDeviceFragment,
+                            HardwareWalletSelectDeviceInput(HardwareWalletBleOperation.FirmwareUpgrade),
+                        )
                     }
                 )
             }

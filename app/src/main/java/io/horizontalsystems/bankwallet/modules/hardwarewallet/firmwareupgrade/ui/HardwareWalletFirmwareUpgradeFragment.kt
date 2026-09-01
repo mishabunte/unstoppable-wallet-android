@@ -1,6 +1,7 @@
 package io.horizontalsystems.bankwallet.modules.hardwarewallet.firmwareupgrade.ui
 
 import android.util.Log
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -42,8 +44,9 @@ import io.horizontalsystems.bankwallet.entities.DataState
 import io.horizontalsystems.bankwallet.modules.hardwarewallet.firmwareupgrade.FirmwareDownloadState
 import io.horizontalsystems.bankwallet.modules.hardwarewallet.firmwareupgrade.HardwareWalletFirmwareUpgradeViewModel
 import io.horizontalsystems.bankwallet.modules.hardwarewallet.firmwareupgrade.UpgradeState
-import io.horizontalsystems.bankwallet.modules.hardwarewallet.firmwareupgrade.ble.BootloaderVersion
-import io.horizontalsystems.bankwallet.modules.hardwarewallet.firmwareupgrade.ble.DeviceVersionInfo
+import io.horizontalsystems.bankwallet.modules.hardwarewallet.ble.BootloaderVersion
+import io.horizontalsystems.bankwallet.modules.hardwarewallet.ble.DeviceVersionInfo
+import io.horizontalsystems.bankwallet.modules.hardwarewallet.ble.HardwareWalletBleModule
 import io.horizontalsystems.bankwallet.ui.compose.ComposeAppTheme
 import io.horizontalsystems.bankwallet.ui.compose.components.AppBar
 import io.horizontalsystems.bankwallet.ui.compose.components.ButtonPrimaryDefault
@@ -56,7 +59,10 @@ class HardwareWalletFirmwareUpgradeFragment : BaseComposeFragment() {
     override fun GetContent(navController: NavController) {
         ComposeAppTheme {
             val viewModel = viewModel<HardwareWalletFirmwareUpgradeViewModel>(
-                viewModelStoreOwner = requireActivity()
+                viewModelStoreOwner = requireActivity(),
+                factory = HardwareWalletFirmwareUpgradeViewModel.Factory(
+                    HardwareWalletBleModule.session(requireContext()),
+                ),
             )
             HardwareWalletFirmwareUpgradeScreen(navController, viewModel)
         }
@@ -70,10 +76,10 @@ private fun Preview_FirmwareUpgradeData() {
     ComposeAppTheme(isDarkTheme) {
         FirmwareUpgradeData(
             upgradeState = UpgradeState.Connected,
-            firmwareDownloadState = FirmwareDownloadState.NewestVersion,
+            firmwareDownloadState = FirmwareDownloadState.Success,
             deviceVersionInfo = DeviceVersionInfo(
                 bootloaderVersion = BootloaderVersion.GENESIS,
-                deviceVersion = "0.4.6'10"
+                deviceVersion = "0.4.8'6"
             ),
             downloadedFirmwareVersion = "0.4.7'12",
             deviceName = "hito",
@@ -485,12 +491,7 @@ fun HardwareWalletFirmwareUpgradeScreen(
     viewModel: HardwareWalletFirmwareUpgradeViewModel,
 )
 {
-    val hitoBleManager by viewModel.hitoBleManager.collectAsState()
-    LaunchedEffect(Unit) {
-        hitoBleManager?.let { _ ->
-            viewModel.onHitoDeviceSelected()
-        }
-    }
+    LaunchedEffect(viewModel) { viewModel.onHitoDeviceSelected() }
     val upgradeState by viewModel.upgradeState.collectAsStateWithLifecycle()
     val firmwareDownloadState by viewModel.firmwareDownloadState.collectAsStateWithLifecycle()
     val installationProgress by viewModel.installationProgress.collectAsStateWithLifecycle()
@@ -498,15 +499,18 @@ fun HardwareWalletFirmwareUpgradeScreen(
     val deviceName by viewModel.deviceName.collectAsState()
     val downloadedFirmwareVersion by viewModel.downloadedFirmwareVersion.collectAsState()
 
+    fun close() {
+        viewModel.onLeavingScreen()
+        navController?.popBackStack()
+    }
+    BackHandler(onBack = ::close)
+
     ComposeAppTheme {
         Column(Modifier.fillMaxSize().background(ComposeAppTheme.colors.tyler)) {
             AppBar(
-                title = "Firmware Upgrade",
+                title = stringResource(R.string.HardwareWalletFirmwareUpgrade_Title),
                 navigationIcon = {
-                    HsBackButton(onClick = {
-                        navController?.popBackStack()
-                        viewModel.onLeavingScreen()
-                    })
+                    HsBackButton(onClick = ::close)
                 },
             )
             FirmwareUpgradeData(

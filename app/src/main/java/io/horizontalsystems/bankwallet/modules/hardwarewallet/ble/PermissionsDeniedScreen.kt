@@ -1,4 +1,4 @@
-package io.horizontalsystems.bankwallet.modules.hardwarewallet.firmwareupgrade.ble
+package io.horizontalsystems.bankwallet.modules.hardwarewallet.ble
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement

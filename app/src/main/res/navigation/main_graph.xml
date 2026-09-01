@@ -18,10 +18,22 @@
         android:name="io.horizontalsystems.bankwallet.modules.hardwarewallet.firmwareupgrade.ui.HardwareWalletFirmwareUpgradeInitialFragment" />
     <fragment
         android:id="@+id/hardwareWalletSelectDeviceFragment"
-        android:name="io.horizontalsystems.bankwallet.modules.hardwarewallet.firmwareupgrade.ui.HardwareWalletSelectDeviceFragment" />
+        android:name="io.horizontalsystems.bankwallet.modules.hardwarewallet.ble.HardwareWalletSelectDeviceFragment" />
     <fragment
         android:id="@+id/hardwareWalletFirmwareUpgradeFragment"
         android:name="io.horizontalsystems.bankwallet.modules.hardwarewallet.firmwareupgrade.ui.HardwareWalletFirmwareUpgradeFragment" />
+    <fragment
+        android:id="@+id/hardwareWalletTransactionSigningFragment"
+        android:name="io.horizontalsystems.bankwallet.modules.hardwarewallet.ble.HardwareWalletBleFragment" />
+    <fragment
+        android:id="@+id/hardwareWalletPairingFragment"
+        android:name="io.horizontalsystems.bankwallet.modules.hardwarewallet.ble.HardwareWalletPairingFragment" />
+    <fragment
+        android:id="@+id/hardwareWalletMnemonicImportWarningFragment"
+        android:name="io.horizontalsystems.bankwallet.modules.hardwarewallet.importmnemonic.HardwareWalletMnemonicImportWarningFragment" />
+    <fragment
+        android:id="@+id/hardwareWalletMnemonicImportFragment"
+        android:name="io.horizontalsystems.bankwallet.modules.hardwarewallet.importmnemonic.HardwareWalletMnemonicImportFragment" />
     <fragment
         android:id="@+id/mainFragment"
         android:name="io.horizontalsystems.bankwallet.modules.main.MainFragment"/>

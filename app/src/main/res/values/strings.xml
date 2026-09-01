@@ -1318,6 +1318,35 @@
 
     <!--Hardware Wallet Firmware Upgrade-->
     <string name="HardwareWalletFirmwareUpgrade_Title">Firmware Upgrade</string>
+    <string name="HardwareWalletBle_SelectDevice">Select Device</string>
+    <string name="HardwareWalletBle_NearbyDevices">Nearby devices</string>
+    <string name="HardwareWalletBle_RetryScan">Retry Scan</string>
+    <string name="HardwareWalletBle_NoDevices">No Hito device found</string>
+    <string name="HardwareWalletBle_Scanning">Scanning for Hito devices…</string>
+    <string name="HardwareWalletBle_ScanError">Error occurred while scanning</string>
+    <string name="HardwareWalletBle_TryAgainLater">Please try again in 30 seconds</string>
+    <string name="HardwareWalletBle_PermissionRationale">Bluetooth access is required to scan for hardware wallet devices.</string>
+    <string name="HardwareWalletBle_PermissionRationaleLocation">Bluetooth and Location access are required to scan for hardware wallet devices.</string>
+    <string name="HardwareWalletBle_PermissionSettings">Open Settings and grant Bluetooth permission to scan for hardware wallet devices.</string>
+    <string name="HardwareWalletBle_PermissionSettingsLocation">Open Settings and grant Bluetooth and Location permissions to scan for hardware wallet devices.</string>
+    <string name="HardwareWalletBle_GrantPermission">Grant Permission</string>
+    <string name="HardwareWalletBle_OpenSettings">Open Settings</string>
+    <string name="HardwareWalletBle_BluetoothDisabled">Bluetooth is powered off</string>
+    <string name="HardwareWalletBle_BluetoothRequired">Bluetooth is required to connect to your hardware wallet.</string>
+    <string name="HardwareWalletBle_EnableBluetooth">Enable Bluetooth</string>
+    <string name="HardwareWalletBle_DeviceWithoutName">Unnamed device</string>
+    <string name="HardwareWalletTransaction_Title">Sign Transaction</string>
+    <string name="HardwareWalletTransaction_Connecting">Connecting to Hito Wallet…</string>
+    <string name="HardwareWalletTransaction_Sending">Sending data to Hito Wallet…</string>
+    <string name="HardwareWalletTransaction_Waiting">Waiting for Hito Wallet response…</string>
+    <string name="HardwareWalletTransaction_Receiving">Receiving response from Hito Wallet…</string>
+    <string name="HardwareWalletTransaction_Completed">Data sent successfully</string>
+    <string name="HardwareWalletTransaction_InvalidRequest">The signing request is no longer available.</string>
+    <string name="HardwareWalletTransaction_Disconnected">Hito Wallet disconnected unexpectedly.</string>
+    <string name="HardwareWalletTransaction_Rejected">Transaction was rejected on Hito Wallet.</string>
+    <string name="HardwareWalletTransaction_Timeout">Hito Wallet did not respond in time.</string>
+    <string name="HardwareWalletTransaction_InvalidResponse">Hito Wallet returned an invalid response.</string>
+    <string name="HardwareWalletTransaction_TransferFailed">Unable to sign the transaction over Bluetooth.</string>
 
     <!--Hardware Wallet Authentication-->
     <string name="HardwareWalletAuthentication_Title">Wallet Authentication</string>

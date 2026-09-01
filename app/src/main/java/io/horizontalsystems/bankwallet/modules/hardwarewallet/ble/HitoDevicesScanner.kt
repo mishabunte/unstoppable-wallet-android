@@ -1,4 +1,4 @@
-package io.horizontalsystems.bankwallet.modules.hardwarewallet.firmwareupgrade.ble
+package io.horizontalsystems.bankwallet.modules.hardwarewallet.ble
 
 import android.Manifest
 import androidx.annotation.RequiresPermission
@@ -10,8 +10,10 @@ import no.nordicsemi.android.support.v18.scanner.ScanCallback
 import no.nordicsemi.android.support.v18.scanner.ScanResult
 import no.nordicsemi.android.support.v18.scanner.ScanSettings
 
-class HitoDevicesScanner(private val hitoDevicesStore: HitoDevicesStore) {
-    fun getScannerState(): Flow<ScanningState> =
+class HitoDevicesScanner(
+    private val hitoDevicesStore: HitoDevicesStore,
+) : HardwareWalletDeviceScanner {
+    override fun getScannerState(): Flow<ScanningState> =
         callbackFlow {
             val scanCallback: ScanCallback = object : ScanCallback() {
                 @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
@@ -54,7 +56,7 @@ class HitoDevicesScanner(private val hitoDevicesStore: HitoDevicesStore) {
             }
         }
 
-    fun clear() {
+    override fun clear() {
         hitoDevicesStore.clear()
     }
 }

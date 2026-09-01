@@ -1,4 +1,4 @@
-package io.horizontalsystems.bankwallet.modules.hardwarewallet.firmwareupgrade.ui
+package io.horizontalsystems.bankwallet.modules.hardwarewallet.ble
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
@@ -12,11 +12,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,8 +25,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import io.horizontalsystems.bankwallet.modules.hardwarewallet.firmwareupgrade.ble.HitoDevice
 import io.horizontalsystems.bankwallet.ui.compose.ComposeAppTheme
 import io.horizontalsystems.bankwallet.ui.compose.components.RowUniversal
 
@@ -96,7 +93,7 @@ fun DiscoveredDeviceCell(
                             style = ComposeAppTheme.typography.title3
                         )
                     } ?: Text(
-                        text = "No name",
+                        text = stringResource(R.string.HardwareWalletBle_DeviceWithoutName),
                         color = ComposeAppTheme.colors.leah,
                         style = ComposeAppTheme.typography.title3,
                         modifier = Modifier.alpha(0.7f)

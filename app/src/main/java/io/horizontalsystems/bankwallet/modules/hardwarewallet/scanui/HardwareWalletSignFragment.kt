@@ -51,7 +51,7 @@ fun HardwareWalletSendCautions() {
             )
             Spacer(modifier = Modifier.weight(1f))
             Text(
-                text = "Check your transaction data before signing",
+                text = "Check your transaction data",
                 style = ComposeAppTheme.typography.body,
                 color = ComposeAppTheme.colors.leah,
                 textAlign = TextAlign.End,
@@ -68,7 +68,7 @@ fun HardwareWalletSendCautions() {
             DottedList(
                 Modifier.padding(horizontal = 16.dp),
                 listOf(
-                    "Press 'Sign' on your hardware device",
+                    "Press 'Approve' on your hardware device",
                     "Press 'Continue' on your phone to scan the QR code appeared"
                 ),
                 textColor = ComposeAppTheme.colors.grey
