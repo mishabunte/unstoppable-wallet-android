@@ -375,7 +375,9 @@ dependencies {
     implementation 'com.github.4acha4a:stellar-kit-android:4f461ef'
     implementation 'com.github.horizontalsystems:ton-kit-android:dcddd90'
     implementation 'com.github.horizontalsystems:bitcoin-kit-android:7826bf5'
-    implementation 'com.github.4acha4a:ethereum-kit-android:e686f49'
+    implementation('com.github.4acha4a:ethereum-kit-android:e686f49') {
+        exclude group: 'org.jetbrains.kotlin', module: 'kotlin-android-extensions-runtime'
+    }
     implementation 'com.github.horizontalsystems:blockchain-fee-rate-kit-android:1d3bd49'
     implementation 'com.github.4acha4a:market-kit-android:a81e1fe'
     implementation 'com.github.4acha4a:solana-kit-android:3560475'
