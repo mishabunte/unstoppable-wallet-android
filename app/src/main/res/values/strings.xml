@@ -1302,6 +1302,33 @@
 
     <!-- Link Hardware Wallet -->
     <string name="Hardware_LinkBy">Link By</string>
+    <string name="HardwareWalletImport_Title" translatable="false">Import existing wallet to Hito</string>
+    <string name="HardwareWalletImport_Experimental" translatable="false">Experimental</string>
+    <string name="HardwareWalletImport_Explanation" translatable="false">Your recovery phrase will be entered on this Android phone and transferred to a paired Hito device over the existing Bluetooth connection.</string>
+    <string name="HardwareWalletImport_Warning" translatable="false">Only use this method in a trusted environment. A compromised phone, keyboard, or screen-recording tool could expose your recovery phrase.</string>
+    <string name="HardwareWalletImport_Acknowledge" translatable="false">I understand that entering my recovery phrase on this phone can expose it.</string>
+    <string name="HardwareWalletImport_SelectDevice" translatable="false">Select a paired Hito</string>
+    <string name="HardwareWalletImport_InputHelp" translatable="false">Enter a 12, 15, 18, 21, or 24-word English BIP-39 recovery phrase. Whitespace is normalized before validation.</string>
+    <string name="HardwareWalletImport_InputHint" translatable="false">Recovery phrase</string>
+    <string name="HardwareWalletImport_Connecting" translatable="false">Connecting to Hito…</string>
+    <string name="HardwareWalletImport_Sending" translatable="false">Transferring to Hito… %1$d%%</string>
+    <string name="HardwareWalletImport_Processing" translatable="false">Waiting for Hito to finish processing…</string>
+    <string name="HardwareWalletImport_ConfirmTitle" translatable="false">Confirm import</string>
+    <string name="HardwareWalletImport_ConfirmDescription" translatable="false">Send a %1$d-word recovery phrase to %2$s? The phrase is intentionally not shown here.</string>
+    <string name="HardwareWalletImport_ConfirmButton" translatable="false">Import to Hito</string>
+    <string name="HardwareWalletImport_HitoDevice" translatable="false">Hito device</string>
+    <string name="HardwareWalletImport_Success" translatable="false">The recovery phrase was accepted by Hito.</string>
+    <string name="HardwareWalletImport_ChooseDevice" translatable="false">Choose paired Hito</string>
+    <string name="HardwareWalletImport_ErrorEmpty" translatable="false">Enter a recovery phrase.</string>
+    <string name="HardwareWalletImport_ErrorWordCount" translatable="false">The phrase must contain 12, 15, 18, 21, or 24 words.</string>
+    <string name="HardwareWalletImport_ErrorInvalidWord" translatable="false">The phrase contains a word that is not in the English BIP-39 word list.</string>
+    <string name="HardwareWalletImport_ErrorChecksum" translatable="false">The recovery phrase checksum is invalid.</string>
+    <string name="HardwareWalletImport_ErrorNotConnected" translatable="false">A paired, connected Hito device is required.</string>
+    <string name="HardwareWalletImport_ErrorDisconnected" translatable="false">Hito disconnected during the import. The phrase was cleared; reconnect and enter it again.</string>
+    <string name="HardwareWalletImport_ErrorTimeout" translatable="false">Hito did not return a final response in time. The phrase was cleared; reconnect before retrying.</string>
+    <string name="HardwareWalletImport_ErrorRejected" translatable="false">Hito rejected the command. Ensure the firmware supports mnemonic import and the vault is empty, unlocked, and in a valid state.</string>
+    <string name="HardwareWalletImport_ErrorResponse" translatable="false">Hito returned an unexpected response. The phrase was cleared and was not treated as imported.</string>
+    <string name="HardwareWalletImport_ErrorTransfer" translatable="false">The recovery phrase could not be transferred. It was cleared; reconnect before retrying.</string>
     <string name="Hardware_LinkBy_TypeEvmAddress" translatable="false">EVM Address</string>
     <string name="Hardware_LinkBy_TypeStellarAddress" translatable="false">Stellar Address</string>
     <string name="Hardware_LinkBy_TypeSolanaAddress" translatable="false">Solana Address</string>

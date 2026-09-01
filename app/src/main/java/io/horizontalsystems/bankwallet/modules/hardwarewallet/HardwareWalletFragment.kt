@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
@@ -19,6 +20,7 @@ import androidx.core.os.bundleOf
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import io.horizontalsystems.bankwallet.R
+import io.horizontalsystems.bankwallet.BuildConfig
 import io.horizontalsystems.bankwallet.core.BaseComposeFragment
 import io.horizontalsystems.bankwallet.core.getInput
 import io.horizontalsystems.bankwallet.core.slideFromRight
@@ -31,6 +33,7 @@ import io.horizontalsystems.bankwallet.modules.hardwarewallet.selectblockchains.
 import io.horizontalsystems.bankwallet.ui.compose.ComposeAppTheme
 import io.horizontalsystems.bankwallet.ui.compose.TranslatableString
 import io.horizontalsystems.bankwallet.ui.compose.components.AppBar
+import io.horizontalsystems.bankwallet.ui.compose.components.ButtonSecondaryDefault
 import io.horizontalsystems.bankwallet.ui.compose.components.FormsInput
 import io.horizontalsystems.bankwallet.ui.compose.components.FormsInputMultiline
 import io.horizontalsystems.bankwallet.ui.compose.components.HeaderText
@@ -225,6 +228,27 @@ fun HardwareWalletScreen(navController: NavController, popUpToInclusiveId: Int, 
                         }
                     }
                      */
+                }
+
+                if (BuildConfig.DEBUG) {
+                    Spacer(Modifier.height(24.dp))
+                    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        Text(
+                            text = stringResource(R.string.HardwareWalletImport_Experimental),
+                            style = ComposeAppTheme.typography.captionSB,
+                            color = ComposeAppTheme.colors.jacob,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        ButtonSecondaryDefault(
+                            modifier = Modifier.fillMaxWidth(),
+                            title = stringResource(R.string.HardwareWalletImport_Title),
+                            onClick = {
+                                navController.slideFromRight(
+                                    R.id.hardwareWalletMnemonicImportWarningFragment,
+                                )
+                            },
+                        )
+                    }
                 }
 
                 Spacer(Modifier.height(32.dp))
